@@ -69,6 +69,6 @@ ctest --preset windows-mingw
 powershell -ExecutionPolicy Bypass -File scripts/package.ps1
 ```
 
-`setup-ocr.ps1` 默认使用 Visual Studio 18 2026，可用 `-Generator` 选择已安装的版本。依赖下载到 `artifacts/ocr-deps`，逐项验证固定 SHA256，再输出 `build/ocr`；自定义构建目录可用 `-OutputDirectory 构建目录/ocr`。运行期间不联网下载 OCR 组件。`scripts/build.ps1 -Package` 包含此准备步骤。
+`setup-ocr.ps1` 默认使用 Visual Studio 18 2026，可用 `-Generator` 选择已安装的版本。脚本从 NuGet 下载微软发布的 `Microsoft.ML.OnnxRuntime` 1.23.2 包，提取编译所需头文件、Windows x64 原生库和许可证。依赖下载到 `artifacts/ocr-deps`，逐项验证固定 SHA256，再输出 `build/ocr`；自定义构建目录可用 `-OutputDirectory 构建目录/ocr`。运行期间不联网下载 OCR 组件。`scripts/build.ps1 -Package` 包含此准备步骤。
 
 包中必须保留 `yiyi_ocr_worker.exe`、`ocr` 目录、Qt 动态库及插件；单独复制主 EXE 不能运行全部功能。第三方模型、代码、运行库来源和许可证见 `THIRD_PARTY_NOTICES.md` 及 `ocr/licenses`。
