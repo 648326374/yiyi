@@ -1,0 +1,1 @@
+{"word":"hello","phonetic":"/həˈləʊ/","partOfSpeech":"interjection · 感叹词","definitions":[{"meaning":"你好；喂","detail":"用于打招呼或引起注意。"}],"examples":[{"source":"Hello, how are you?","translation":"你好，你好吗？"}],"collocations":[{"phrase":"say hello","meaning":"打招呼"}],"synonyms":["hi","hey"],"note":"英语中，"hello" 常用于打招呼。"}

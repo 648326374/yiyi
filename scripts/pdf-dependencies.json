@@ -1,0 +1,41 @@
+{
+  "qpdf": {
+    "version": "12.2.0",
+    "file": "qpdf-12.2.0-mingw64.zip",
+    "url": "https://github.com/qpdf/qpdf/releases/download/v12.2.0/qpdf-12.2.0-mingw64.zip",
+    "apiUrl": "https://api.github.com/repos/qpdf/qpdf/releases/assets/251817640",
+    "sha256": "63c9378b7a3d7d11f3bb95b812ee152e5e74ed5a6d6e4f63cfee0ca145012d4c"
+  },
+  "pdfium": {
+    "version": "chromium/8138",
+    "file": "pdfium-win-x64-8138.tgz",
+    "url": "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8138/pdfium-win-x64.tgz",
+    "sha256": "8d48973e3eb472dda0f5f2435e595ac043f9f2219dd71883392f549445afa8a5"
+  },
+  "fonttools": {
+    "version": "4.60.1",
+    "file": "fonttools-4.60.1-py3-none-any.whl",
+    "url": "https://files.pythonhosted.org/packages/c7/93/0dd45cd283c32dea1545151d8c3637b4b8c53cdb3a625aeb2885b184d74d/fonttools-4.60.1-py3-none-any.whl",
+    "sha256": "906306ac7afe2156fcf0042173d6ebbb05416af70f6b370967b47f8f00103bbb"
+  },
+  "preparedFont": {
+    "file": "YiyiPdfSans-Regular.otf",
+    "sha256": "5e1eb994a48d8c97ce084f084744e235e389c5d4178d84563910a87cc4a7ca8d",
+    "recipe": "tools/prepare_pdf_font.py: renamed family; remove radical aliases; retain Unicode and layout closures; give remaining Unicode aliases unique glyph IDs"
+  },
+  "serifFont": {
+    "file": "NotoSerifCJKsc-Regular.otf",
+    "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Serif/OTF/SimplifiedChinese/NotoSerifCJKsc-Regular.otf",
+    "sha256": "2a2eae2628df83556c54018c41e20fa532c1b862c5256ae8b3f23feb918d12ca"
+  },
+  "preparedSerifFont": {
+    "file": "YiyiPdfSerif-Regular.otf",
+    "sha256": "df5eed39f89845505d73dcfcca79ddc37f8b01cf57fcabe212aba5c5beedc1d8",
+    "recipe": "tools/prepare_pdf_font.py: renamed family; remove radical aliases; retain Unicode and layout closures; give remaining Unicode aliases unique glyph IDs"
+  },
+  "font": {
+    "file": "NotoSansCJKsc-Regular.otf",
+    "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/f8d157532fbfaeda587e826d4cd5b21a49186f7c/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf",
+    "sha256": "2c76254f6fc379fddfce0a7e84fb5385bb135d3e399294f6eeb6680d0365b74b"
+  }
+}

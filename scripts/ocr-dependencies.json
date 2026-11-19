@@ -1,0 +1,17 @@
+{
+  "rapidSource": {"file":"source.7z","url":"https://github.com/RapidAI/RapidOcrOnnx/releases/download/1.2.2/Project_RapidOcrOnnx-1.2.2.7z","sha256":"5049d4c9caf0143a9f35e618f80f7e5946b8df1e57a90b3ca8e9cc105fc8a6ae"},
+  "extractor": {"file":"7zr.exe","url":"https://github.com/ip7z/7zip/releases/download/25.01/7zr.exe","sha256":"27cbe3d5804ad09e90bbcaa916da0d5c3b0be9462d0e0fb6cb54be5ed9030875"},
+  "onnxRuntime": {"file":"ort.zip","url":"https://github.com/microsoft/onnxruntime/releases/download/v1.23.2/onnxruntime-win-x64-1.23.2.zip","sha256":"0b38df9af21834e41e73d602d90db5cb06dbd1ca618948b8f1d66d607ac9f3cd"},
+  "models": [
+    {"file":"det.onnx","url":"https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx","sha256":"4d97c44a20d30a81aad087d6a396b08f786c4635742afc391f6621f5c6ae78ae"},
+    {"file":"rec.onnx","url":"https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx","sha256":"5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5"},
+    {"file":"cls.onnx","url":"https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv4/cls/ch_ppocr_mobile_v2.0_cls_mobile.onnx","sha256":"e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c"},
+    {"file":"keys.txt","url":"https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt","sha256":"d1979e9f794c464c0d2e0b70a7fe14dd978e9dc644c0e71f14158cdf8342af1b"}
+  ],
+  "licenses": [
+    {"file":"PP-OCRv5_mobile_det-card.md","url":"https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_det/raw/0d63e78e2b680928f6b1747d76a08db6e645efb7/README.md","sha256":"4cc20ad6d41af86b3ce9885ffb0956e152574a2eb14179aeb07fd2d3956161ca"},
+    {"file":"PP-OCRv5_mobile_rec-card.md","url":"https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_rec/raw/682f20538d8c086cb2128e5cfac775e6c4904e85/README.md","sha256":"b02727443cef4904a9ee12accdfaf66fcbada7b93a1a05c40dde7582291ba28c"},
+    {"file":"paddle-license.txt","api":"https://api.github.com/repos/PaddlePaddle/PaddleOCR/contents/LICENSE?ref=v3.3.2","sha256":"3840c5c0c61c294264d2dd77b8777be6ddd90121ef4e0e64abcd22edea581d6e"},
+    {"file":"model-licenses.md","api":"https://api.github.com/repos/RapidAI/RapidOCR/contents/python/MODEL_LICENSES.md?ref=v3.10.0","sha256":"c5fd0e8603d3df743355b546121e6fe0f4ef8ff455c5a85c1681fd3ae520e153"}
+  ]
+}

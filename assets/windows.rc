@@ -1,0 +1,24 @@
+IDI_ICON1 ICON "app.ico"
+1 VERSIONINFO
+FILEVERSION 0,11,3,0
+PRODUCTVERSION 0,11,3,0
+FILEOS 0x40004
+FILETYPE 0x1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904b0"
+    BEGIN
+      VALUE "CompanyName", "Yiyi"
+      VALUE "FileDescription", "Yiyi AI Dictionary"
+      VALUE "FileVersion", "0.11.3"
+      VALUE "InternalName", "Yiyi"
+      VALUE "ProductName", "Yiyi"
+      VALUE "ProductVersion", "0.11.3"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1200
+  END
+END
