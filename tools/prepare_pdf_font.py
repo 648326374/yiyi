@@ -15,8 +15,8 @@ from fontTools.ttLib import TTFont
 from fontTools import subset
 
 font = TTFont(args.source, recalcTimestamp=False)
-# Noto shares outlines between ordinary ideographs and Kangxi radicals. Qt's
-# PDF reverse cmap otherwise copies e.g. 示 as ⽰. Remove only radical aliases;
+# Noto shares outlines between ordinary ideographs and Kangxi radicals.
+# Remove the radical aliases to avoid ambiguous PDF character mappings;
 # the ordinary CJK codepoints and outlines remain intact.
 for table in font["cmap"].tables:
     if table.isUnicode():

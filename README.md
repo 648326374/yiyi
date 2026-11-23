@@ -1,30 +1,44 @@
 # 译意 Yiyi
 
-使用 **C++/WinRT + WinUI 3** 开发的 Windows 桌面 AI 翻译词典。仓库保留 Qt Quick / QML 版作为迁移和回归对照。
-
-当前版本：**0.11.3**。修复词典返回内容的容错解析：附加字段格式错误时保留可可靠解析的释义；完整模式兼容简短文字，简明模式也可提取 JSON 中的释义；无有效译义时不显示或保存原始 JSON。缩短查词提示词，扩展内容改为可选，不增加 AI 请求。Word / PPT 已完成任务可直接点击「重新翻译」，确认后按界面显示的设置从第一段重新开始；默认 build 入口与便携版同步更新。修复 Word / PPT 恢复任务后界面语言与实际请求不一致：控件显示任务真实设置，更改语言、风格或服务前确认清除旧译文，取消时保留结果。新增可编辑的 DOCX / PPTX 翻译，支持段落校对、单段重译、本机进度与草稿恢复、PPT 字号下限和校对清单；可对文档中的图片取字，另存译文无需安装 Office。支持将单个 TXT、DOCX、PPTX 或 PDF 拖入主窗口，自动进入对应页面。PDF 导出先检查全书，不能安全替换的区域保留原文并附页码与原因清单；修复目录点线、密集索引、页码数字误判和导出组件的系统字体发现。PDF 内容校验失败会限次自动重试，持续失败的段落保留原文并记入待校对，后续页面继续；可在段落校对中查看失败返回。修复技术文档的换行代码注释、目录链接下划线、首行缩进与公式旁文字识别；重新解析时保留匹配译文并补查已走过的页码。AI 生成请求默认允许连续 10 分钟无数据响应，PDF 可在翻译设置中调整等待时间，状态栏显示响应阶段与已用时间。PDF 界面精简为两行工具栏与一行状态栏，扫描页可识别后自动翻译，支持统一暂停、重开续接、问题定位，以及整页成功后替换的当前页重译。PDF 取消整份文件大小、页数、字符数和段落数的固定门槛，支持分页解析、暂停续接、按页保存与分批导出。保留多栏、规则/合并/无边框表格、多级及跨页表头，以及可视化结构校正。扫描图片背景可选择自动清理、局部修复、底色框或原图对照；修复需先检查预览再确认。PDF 翻译采用原版式对照：文字页保留原文字位置，扫描页先在本机检测文字区域，再由所选 AI 分段识别、校对、翻译。译文写回原页，保留图片、Logo、分隔线与列表位置，预览和导出一致。支持原文及译文编辑、复制、单段重译、区域与字号调整、保留原文；随包提供中文无衬线和衬线字体。保留简明 / 完整词条、TXT 翻译、本地 RapidOCR 与 AI 识图取字，不使用离线词库。
+使用 **C++/WinRT + WinUI 3** 开发的 Windows 桌面 AI 翻译词典。当前版本为 **0.11.3**。
 
 ![译意翻译工作台](docs/screenshots/translate-light.png)
 
-## WinUI 3 构建与运行
+## 下载与运行
 
-`winui/` 提供 C++/WinRT + WinUI 3 工作台，已接入五种 AI 接口、简明与完整词条、流式翻译、历史与收藏、TXT 和 Word/PPT 文档翻译、截图取字、本地 OCR、AI 识图、托盘、快捷键和划词。拖入单个 TXT、DOCX、PPTX 或 PDF 可进入对应工作区。
+解压 `dist/Yiyi-0.11.3-winui-windows-x64.zip`，运行 `Yiyi-WinUI/Yiyi.WinUI.exe`。x64 ZIP 约 68 MiB，解压约 105 MiB，包含本地 OCR 模型、PDFium、qpdf 及两套 PDF 字体。启动需要共享的 Windows App Runtime 2.4 x64。 [Windows App Runtime 下载](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads/)
 
-PDF 页面支持原文与译文同步预览、当前页或整篇翻译、暂停续接、扫描页 AI 识别、段落校对和结构校正。PDFium 在独立进程中处理原页，译文使用 DirectWrite 排版并嵌入字体。导出尽量保留原页的版式、图片、链接和批注，无法安全替换的区域保留原文并写入检查清单。
+首次启动点击「偏好设置 → 添加 AI 服务」。支持 Ollama、LM Studio、OpenAI Chat Completions、OpenAI Responses、Anthropic 和 Gemini。本地服务需事先启动，云端服务使用自己的 API Key。
 
-两版默认使用 `%LOCALAPPDATA%\Yiyi\Yiyi` 中的 `history.sqlite` 和 `pdf-tasks/`。WinUI 首次启动读取原有 `settings.ini`，之后将设置写入 `settings.json`。API Key 使用当前 Windows 用户的 DPAPI 保护。
+默认用户数据位于 `%LOCALAPPDATA%\Yiyi\Yiyi`。设置写入 `settings.json`，历史和收藏写入 `history.sqlite`，文档任务存入 `office-tasks/` 和 `pdf-tasks/`。首次启动可读取原有 `settings.ini`，API Key 由当前 Windows 用户的 DPAPI 保护。更新前可从托盘退出正在运行的实例。
 
-x64 ZIP 约 68 MiB，解压约 105 MiB，包含本地 OCR 模型、PDFium、qpdf 及两套 PDF 字体。构建和发布包不依赖 Qt。启动需要共享的 Windows App Runtime 2.4 x64。[Windows App Runtime 2.4 下载](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads/)
+## 功能
 
-开发环境需要 Visual Studio 的「使用 C++ 的桌面开发」工作负载、Windows SDK 10.0.26100.0 和 CMake。首次准备 PDF 依赖需要 Python 3，构建脚本也会准备隔离工作进程及 OCR 运行库。
+- 查词、文本翻译及智能识别，支持简明词条和流式完整词条、多服务配置、可选思考等级，以及可搜索的历史和生词本。
+- Windows 托盘、可配置的全局快捷键与划词浮标。截图支持本地 RapidOCR 和 AI 识图，校对后可复制、填入工作台或翻译。
+- TXT 分段翻译可停止、续译及导出已完成部分。DOCX / PPTX 支持原格式导出、段落校对、单段重译和进度恢复。旧版 DOC / PPT 可先转换为 DOCX / PPTX。
+- PDF 支持多栏、表格、扫描区域识别、原文与译文同步预览、暂停续接和结构校正。导出保留图片、链接和批注，嵌入可搜索的译文。无法安全替换的区域保留原文并列入检查清单。
+
+文档和界面预览见 [使用说明](docs/使用说明.md)、[Word / PPT 翻译](docs/Office翻译-0.11.0.md)、[PDF 版式与导出](docs/PDF版式与导出.md)、[深色工作台](docs/screenshots/translate-dark.png)和[验证记录](docs/验证记录.md)。
+
+## 构建与测试
+
+开发环境需要 Visual Studio 的「使用 C++ 的桌面开发」工作负载、Windows SDK 10.0.26100.0、CMake 3.24 或更新版本，以及 Python 3。Visual Studio 2026 对应的生成器要求 CMake 4.2 或更新版本。构建脚本会准备工作进程所需的 OCR 和 PDF 依赖。可用 `-PythonPath` 指定用于准备 PDF 字体的解释器。
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-winui.ps1 -SmokeTest -Package
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1 -SmokeTest -Package
 ```
 
-构建产物位于 `build/winui/Release/Yiyi.WinUI.exe`，ZIP 位于 `dist/`。解压后从 `Yiyi-WinUI` 目录启动。使用 `--data-dir artifacts/winui-profile --no-desktop` 可在独立目录中运行并关闭托盘、快捷键和划词。
+Release 程序位于 `build/winui/Release/Yiyi.WinUI.exe`，可用以下参数在独立配置中启动：
 
-原生回归测试使用 Python 3 和本地模拟服务。
+```powershell
+build/winui/Release/Yiyi.WinUI.exe --data-dir artifacts/manual-test --no-desktop
+build/winui/Release/Yiyi.WinUI.exe --data-dir artifacts/pdf-test --no-desktop --pdf "C:\path\sample.pdf"
+```
+
+`--no-desktop` 关闭托盘、快捷键和划词监测。TXT、DOCX 和 PPTX 可用 `--document` 打开。使用 `-SmokeTest` 会运行启动检查。
+
+准备依赖后运行回归测试。使用 Visual Studio 2022 时，将生成器改为 `Visual Studio 17 2022`。
 
 ```powershell
 cmake -S winui/tests -B build/winui-tests -G "Visual Studio 18 2026" -A x64
@@ -35,55 +49,53 @@ cmake --build build/winui-pdf --config Release
 ctest --test-dir build/winui-pdf -C Release --output-on-failure
 ```
 
-## 运行 Qt 参考版
+测试使用临时数据目录和本机模拟服务。Windows 托盘、快捷键及划词的交互验证需要可操作的桌面。
 
-便携版位于 `dist/Yiyi/Yiyi.exe`，无需另行设置 Qt 环境变量，分享时复制整个 `dist/Yiyi` 文件夹。常规构建输出为 `build/Yiyi.exe`。更新时先从托盘退出旧版，再启动新文件，避免单实例机制唤回旧进程。
+## 工程结构
 
-完整压缩包：`dist/Yiyi-0.11.3-windows-x64.zip`，解压后运行其中的 `Yiyi/Yiyi.exe`；同目录提供 `.sha256` 校验文件。请保留 `ocr`、`pdf` 目录及两个 `yiyi_*_worker.exe`，使用时无需安装 Python。
+| 路径 | 内容 |
+| --- | --- |
+| `winui/` | WinUI 界面、AI 请求、文档任务、SQLite 存储及 Windows 桌面集成 |
+| `winui/pdf/`、`winui/ocr/` | PDF 和 OCR 独立工作进程 |
+| `winui/tests/`、`tests/fixtures/` | 原生回归测试、文档和词典样例 |
+| `assets/` | 应用图标及 Windows 版本资源 |
+| `scripts/`、`tools/` | 构建、打包、依赖准备、字体处理及样例生成 |
 
-旧版正在运行而无法替换目录时，打包会把新版放在 `dist/Yiyi-0.11.3/Yiyi.exe`（如已存在则附加构建标识），具体路径以打包输出为准。先从托盘退出旧版，再启动新版并重新打开文档。
-
-首次启动点击「偏好设置」添加服务。支持 Ollama、LM Studio、OpenAI Chat Completions、OpenAI Responses、Anthropic 和 Gemini；本地服务需由用户事先启动，云端服务使用用户自己的 API Key。
-
-文档：[PDF 界面与流程](docs/PDF界面与流程-0.10.0.md) · [PDF 大文档处理](docs/PDF大文档-0.9.0.md) · [PDF 整书验证与修复](docs/PDF整书验证-0.8.1.md) · [PDF 复杂版式](docs/PDF复杂版式-0.8.0.md) · [使用说明](docs/使用说明.md) · [PDF 原版式](docs/PDF原版式-0.7.0.md) · [PDF 翻译](docs/PDF翻译-0.5.0.md) · [截图识别与 AI 视觉](docs/截图识别与AI视觉-0.4.0.md) · [OCR 与 TXT 初版](docs/OCR与TXT-0.3.0.md) · [验证记录](docs/验证记录.md) · [桌面功能与验证](docs/桌面功能-0.2.0.md)。
-
-界面预览：[简明词条](docs/screenshots/brief-dictionary.png) · [中译英](docs/screenshots/brief-dictionary-english.png) · [完整词条生成中](docs/screenshots/dictionary-progress.png) · [深色模式](docs/screenshots/translate-dark.png) · [服务配置](docs/screenshots/provider-editor.png) · [思考等级](docs/screenshots/provider-reasoning.png) · [偏好设置](docs/screenshots/settings.png) · [生词本](docs/screenshots/favorites.png)。截图记录对应版本的界面，最新改动以版本说明为准。
+PDFium 在独立工作进程中处理原页。DirectWrite 负责译文排版，qpdf 分批合成导出文件。PDFium、qpdf、Noto 字体和构建时的 FontTools 版本与哈希由 `scripts/pdf-dependencies.json` 固定。OCR 桥接库使用 RapidOCR 和 ONNX Runtime。 [第三方组件及许可](THIRD_PARTY_NOTICES.md)
 
 ## 版本记录
 
 **0.11.3 词典结果容错。** 修复完整词条因备注或例句中的格式错误而退回原始 JSON 的问题：保留已完整解析的释义，不猜测未闭合的字符串。完整模式可接受简短文本，简明模式也能从结构化回答提取词性和译义；缺少有效释义或语言检查失败时不入库。缩短查词提示，扩展内容改为可选，每次仍只请求一次模型。
 
-**0.11.2 完成任务重新翻译。** 修复已处理全部段落后主按钮显示灰色「继续翻译」的问题，改为可点击的「重新翻译」。取消保留旧译文及草稿；确认后按界面显示的语言、风格和服务从第一段重译。同步更新 `build/Yiyi.exe` 与发行目录。
+**0.11.2 完成任务重新翻译。** 修复已处理全部段落后主按钮显示灰色「继续翻译」的问题，改为可点击的「重新翻译」。取消保留旧译文及草稿；确认后按界面显示的语言、风格和服务从第一段重译。
 
 **0.11.1 修复 Office 翻译设置。** 恢复任务后显示实际使用的模型服务、源语言、目标语言和风格；修改设置先确认重译，确认后按新设置开始，避免把英语选择显示在中文任务上。
 
 **0.11.0 Word / PPT 翻译。** 「文档翻译」统一 TXT、Word、PPT 入口。直接翻译 OOXML 文字，保留表格、媒体、样式和对象关系，另存可编辑文件。支持页眉页脚、脚注尾注、备注、SmartArt 文字和图表富文本标题；图片可手动取字，关联图表数据和复杂自动内容保留并提示。详见 [Office 翻译说明](docs/Office翻译-0.11.0.md)。
 
-**0.10.5 文件拖入。** 主窗口接收单个 TXT / PDF，显示拖放提示并按类型切换页面；打开后手动翻译。沿用 TXT 编码设置，保护未导出的译文和 PDF 缓存，处理期间与弹窗中避免意外替换。详见 [使用说明](docs/使用说明.md)。
+**0.10.5 文件拖入。** 主窗口接收单个 TXT / PDF，显示拖放提示并按类型切换页面；打开后手动翻译。沿用 TXT 编码设置，保护未导出的译文和 PDF 缓存，处理期间与弹窗中避免意外替换。
 
-**0.10.4 PDF 导出修复。** 导出可用译文，未通过排版或内容校验的区域保留原文，成功后显示数量并附 `.issues.txt` 清单。修复目录点线、密集索引、页码误判和系统字体发现；通过页面工作副本减少长书导出卡顿，合并跨段指令避免文字与图形偏移。不能安全重写的纹理页保留原页。详见 [导出修复与验证](docs/PDF导出修复-0.10.4.md)。
+**0.10.4 PDF 导出修复。** 导出可用译文，未通过排版或内容校验的区域保留原文，成功后显示数量并附 `.issues.txt` 清单。修复目录点线、密集索引、页码误判和系统字体发现；通过页面工作副本减少长书导出卡顿，合并跨段指令避免文字与图形偏移。不能安全重写的纹理页保留原页。
 
-**0.10.3 PDF 异常恢复。** 内容校验失败最多自动重试 2 次；普通翻译中持续失败的段落记入待校对并继续后文，连续 3 段失败则暂停。失败返回可查看和复制，重开后只补未完成段落；当前页重译仍全部成功才替换。详见 [异常恢复与验证](docs/PDF异常恢复-0.10.3.md)。
+**0.10.3 PDF 异常恢复。** 内容校验失败最多自动重试 2 次；普通翻译中持续失败的段落记入待校对并继续后文，连续 3 段失败则暂停。失败返回可查看和复制，重开后只补未完成段落；当前页重译仍全部成功才替换。
 
-**0.10.2 技术书籍翻译。** 修复文本提取、段落完整性、数学上下标、升级续译和页面右侧裁切，补充符号字体回退、异常响应检查和整书排版预检查；短标题与片段可参考上下文。真实书籍验证过程见 [整书验证与修复](docs/PDF整书验证-0.10.2.md)。
+**0.10.2 技术书籍翻译。** 修复文本提取、段落完整性、数学上下标、升级续译和页面右侧裁切，补充符号字体回退、异常响应检查和整书排版预检查；短标题与片段可参考上下文。
 
-**0.10.1 模型等待与超时。** 普通生成请求的无数据等待由 90 秒延长至 10 分钟；PDF 可选 5 / 10 / 20 / 30 / 60 分钟，暂停后调整并继续。保留所选模型与思考等级，显示等待响应、等待正文或接收正文及请求用时。协议明确完成后及时结束请求，区分客户端无响应与 HTTP 408 / 504 / 524 服务端超时。详见 [模型等待修复](docs/PDF模型等待-0.10.1.md)。
+**0.10.1 模型等待与超时。** 普通生成请求的无数据等待由 90 秒延长至 10 分钟；PDF 可选 5 / 10 / 20 / 30 / 60 分钟，暂停后调整并继续。保留所选模型与思考等级，显示等待响应、等待正文或接收正文及请求用时。协议明确完成后及时结束请求，区分客户端无响应与 HTTP 408 / 504 / 524 服务端超时。
 
-**0.10.0 PDF 界面与流程。** 翻译设置集中管理模型，更多菜单保留高级操作；页码直接输入跳转。扫描与文字页共用翻译/暂停/继续入口，任务范围、模型及进度保存到 SQLite。未处理与待校对按页展开，点击定位到段落。当前页重译整页成功才替换，清空全书译文另行确认。详见 [界面与流程](docs/PDF界面与流程-0.10.0.md)。
+**0.10.0 PDF 界面与流程。** 翻译设置集中管理模型，更多菜单保留高级操作；页码直接输入跳转。扫描与文字页共用翻译/暂停/继续入口，任务范围、模型及进度保存到 SQLite。未处理与待校对按页展开，点击定位到段落。当前页重译整页成功才替换，清空全书译文另行确认。
 
 **0.9.0 PDF 大文档。** 移除整篇固定门槛，先读元数据、分批解析、优先当前页，逐页翻译与 SQLite 保存；兼容旧 JSON 任务。增加解析暂停、继续和长任务进度，导出通过磁盘暂存控制资源累积，失败或取消保留原文件与既有目标。仍保留单页复杂度保护，详见 [处理方式与边界](docs/PDF大文档-0.9.0.md)。
 
 **0.8.1 PDF 整书验证修复。** 改进嵌套文字与颜色保留、流程图标签、代码注释及等宽排版、字母索引和图中英文清理。使用指定的 116 页 GLSL 技术书验证；扫描与图片背景修复仍需校对，详见 [修复及边界](docs/PDF整书验证-0.8.1.md)。
 
-**0.8.0 PDF 复杂版式。** 增加多栏阅读顺序、表格单元格与数字校验、合并单元格/多级/跨页表头、无边框推断、结构校正和缓存恢复；图片背景支持纯色/渐变清理、可选 CPU 局部修复、底色框及保留原图对照。局部失败保留该区域，其他区域继续预览；纹理修复需要预览确认，不能保证照片无痕恢复。详见 [使用与边界](docs/PDF复杂版式-0.8.0.md)。
+**0.8.0 PDF 复杂版式。** 增加多栏阅读顺序、表格单元格与数字校验、合并单元格/多级/跨页表头、无边框推断、结构校正和缓存恢复；图片背景支持纯色/渐变清理、可选 CPU 局部修复、底色框及保留原图对照。局部失败保留该区域，其他区域继续预览；纹理修复需要预览确认，不能保证照片无痕恢复。
 
-**0.7.0 PDF 原版式翻译。** 扫描页不再新增 A4 译文页，改为在原尺寸页面的文字区域排版。普通 PDF 改善混合粗体、斜体与中英文字体选择；扫描页保留行级擦除区域，避免清空整段导致图形丢失。旧缓存保留文字草稿，需要重新识别坐标才能导出原版式译文。详见 [原版式使用与限制](docs/PDF原版式-0.7.0.md)。
+**0.7.0 PDF 原版式翻译。** 扫描页不再新增 A4 译文页，改为在原尺寸页面的文字区域排版。普通 PDF 改善混合粗体、斜体与中英文字体选择；扫描页保留行级擦除区域，避免清空整段导致图形丢失。旧缓存保留文字草稿，需要重新识别坐标才能导出原版式译文。
 
-**0.6.0 新增 PDF 扫描件。** 识图与翻译模型分别选择，识别原文与译文分别保存。支持当前页 / 指定范围识别、高清和局部框选，取消或失败保留旧内容。修改原文后提醒更新译文；重新翻译保留已校对原文。扫描原页后附对应译文，自动续页；混合 PDF 逐页处理。详见 [扫描件使用与限制](docs/PDF扫描件-0.6.0.md)。
+**0.6.0 新增 PDF 扫描件。** 识图与翻译模型分别选择，识别原文与译文分别保存。支持当前页 / 指定范围识别、高清和局部框选，取消或失败保留旧内容。修改原文后提醒更新译文；重新翻译保留已校对原文。扫描原页后附对应译文，自动续页；混合 PDF 逐页处理。
 
 **0.5.0 新增 PDF 翻译。** 面向有文字层的横排单栏文档，按段落翻译并在原页面位置重新排版；图片、矢量线条和未译内容保留。支持整篇 / 当前页、同步对照、缩放、点击段落校对、失败重试和本机持久化进度。导出嵌入中文字体的可搜索 PDF；放不下的译文标红并阻止导出，需修改后重试。扫描件及检测到的复杂版式保留原页，不做 OCR 翻译。首版目标语言为简体中文、繁体中文和英语。
-
-[PDF 对照界面预览](docs/screenshots/pdf-translation.png)（合成文档与校对示例，不代表真实模型输出）。
 
 **0.4.2 统一截图取字流程。** 本地 OCR 和 AI 识图都先返回可编辑的原文，统一提供「复制原文」「放入原文」「翻译文字」。同图切换分别保留两种方式的编辑内容，重新识别失败或取消保留原有修改。识图模型独立选择；翻译使用工作台当前模型，仅发送校对后的文字。
 
@@ -116,114 +128,3 @@ ctest --test-dir build/winui-pdf -C Release --output-on-failure
 0.1.9 完整词条改为分段显示：收到完整的释义条目后先展示，例句、搭配等随后补齐；生成中标明状态及等待时间，完成后显示首段响应与请求用时。预览不开放复制、收藏或历史保存；取消和中断会清除预览。完整词条保留原有内容类别，要求解释和例句简短。思考等级仍使用服务配置中的选择，每次查询只发送一次请求。分段显示改善首屏等待，不会缩短服务自身的推理或排队时间。
 
 0.1.10 修复代码审查发现的响应处理问题：`error: null` 不再误报失败；响应长度检查覆盖最后一段，已消费的流式协议数据不挤占译文容量；Gemini 异常结束后的部分输出不再保存为成功结果。打包从全新目录生成，旧便携目录保留到 `artifacts/package-backup-*`，避免混入遗留文件；打包版本读取 CMake 并核对 EXE 版本。
-
-## 已实现
-
-- 查词、文本翻译及自动模式，12 种目标语言、4 种翻译风格。
-- 五种协议适配、SSE / NDJSON 流式响应、取消、超时与错误提示。
-- 多服务配置、模型 ID 自定义、可选思考等级、真实模型连接测试。
-- Windows DPAPI 保护 API Key，SQLite 保存历史和收藏。
-- 可搜索的历史及生词本、记录恢复、复制、删除。
-- 浅色 / 深色 / 跟随系统，原创 SVG 与 QML 矢量图标。
-- 无边框窗口、左侧栏拖动、系统最大化与边缘缩放；统一滚动条和滚动边界。
-- 系统托盘、关闭后后台运行、重复启动唤回已有窗口、可配置的全局快捷键与冲突提示。
-- Windows 划词浮标；点击才查询，自动取词不修改剪贴板，快捷键取词必要时复制并尽量还原原内容。
-- 本地 RapidOCR 中英文识别、同图重新识别、校对后填入工作台或翻译；支持多显示器内单屏框选及高 DPI 坐标转换。
-- TXT 编码选择、分段翻译、停止续译、完整或部分译文导出；原文文件禁止覆盖，失败不自动重试。
-- PDF 多栏与表格结构、图片背景处理、结构校正、双页对照、段落重译、进度恢复、可搜索复制的 PDF 导出。
-
-示例结果仅用于首次界面预览，并明确标注来源。AI 词条不冒充授权专业词典数据。
-
-## 构建与测试
-
-需要 Qt 6.8+ 的 Desktop MinGW 套件，包含 Core、Gui、Widgets、Quick、Quick Controls 2、Network、Sql、Svg、Test；CMake 3.24+ 和 Ninja。Widgets 用于原生托盘菜单，主界面仍使用 QML。开发环境中实际验证的是 Qt 6.12.0、MinGW 13.1.0。OCR 桥接库另用 MSVC x64 编译，需要 Visual Studio C++ 工作负载；通过 C ABI 与 Qt 程序连接。发行版无需这些开发工具。
-
-当前电脑可直接执行：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/setup-ocr.ps1
-powershell -ExecutionPolicy Bypass -File scripts/setup-pdf.ps1
-cmake --preset windows-mingw
-cmake --build --preset windows-mingw -j 6
-ctest --preset windows-mingw
-```
-
-Windows 桌面套件会打开合成文本测试窗口并模拟鼠标、键盘操作，需要可交互且未被遮挡的桌面；检测到焦点或遮挡干扰时会明确跳过相关项目。测试使用临时配置及本地模拟服务，结束时恢复原剪贴板和鼠标位置。
-
-或一键构建、测试并打包：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/build.ps1 -Package
-```
-
-其他安装路径使用 `scripts/build.ps1` 的 `-QtRoot`、`-CompilerRoot`、`-NinjaPath` 参数，或在 Qt Creator 中打开 `CMakeLists.txt` 选择匹配的桌面套件。`CMakePresets.json` 为当前电脑提供预设，可通过未纳入版本控制的 `CMakeUserPresets.json` 定制。
-
-打包脚本使用 `windeployqt` 部署动态运行库，并复制 Qt 安装包附带的 MinGW 运行时。本机 Qt 库由较新版 GCC 构建，运行时应以 Qt 套件附带的版本为准。
-
-PDF 依赖由 `scripts/pdf-dependencies.json` 锁定版本和 SHA256。`setup-pdf.ps1` 下载 PDFium、qpdf、开源 Noto 字体及仅构建时使用的 FontTools，使用 Python 3 生成重命名的 PDF 字体；可用 `-PythonPath` 指定解释器。已有字体环境可单独运行 `scripts/setup-pdf-merge.ps1` 准备合并组件。程序运行时不需要 Python 或字体下载。修改字体映射是为了保证导出的中文可以正确搜索、复制。
-
-仅打包已构建的版本，可指定 EXE：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package.ps1 -BinaryPath build/Yiyi.exe
-```
-
-省略 `-BinaryPath` 时使用 `build/Yiyi.exe`，需先确保它已重新构建；脚本会核对 EXE 与 CMake 中的版本。从全新目录部署后，同步 `docs/*.md`、第三方声明与许可证，生成 ZIP 及 SHA256 校验文件。旧便携目录和同版本旧 ZIP 会保留到 `artifacts/package-backup-*`。
-
-### 测试范围
-
-- 本地 HTTP 模拟服务验证五种协议的请求路径、鉴权头和分段 UTF-8 流式响应。
-- Responses 覆盖连接测试、增量与完成事件去重、完整 JSON 响应、SSE 事件名、失败/截断/拒绝响应及协议切换后凭据保留。
-- 思考等级覆盖默认参数省略、六个显式等级、旧配置兼容、多服务独立保存、重启、协议与预设切换，以及参数拒绝提示和不自动重试；连接测试、翻译与查词均检查实际请求。
-- 验证认证失败、密钥脱敏、取消、非流式回退、截断及损坏响应。
-- 验证词条规范化、结构化结果落库、查询快照、历史恢复、收藏和凭据持久化。
-- 简明词条覆盖纯文本排版、旧配置默认行为、按服务保存词典模式、请求期间输入与设置修改后的结果归属、取消和失败不入库，以及中英双向检查、混合语言拦截、原词前缀与重复处理。
-- 界面测试通过实际鼠标点击验证配置、翻译、复制、收藏、历史打开、主题切换及表单校验。
-- 滚动测试覆盖边界停止、滚轮反向响应、触控板像素增量、滚动条拖动及长历史列表的稳定高度；窗口测试覆盖侧栏导航、双击最大化、还原、最小化和关闭。
-- 桌面测试覆盖全局快捷键注册与冲突回滚、托盘恢复、单实例唤起、文字选择读取、剪贴板回退与恢复，以及浮标点击后才查询；界面测试覆盖快捷键设置、紧凑布局和图标裁剪。
-- 内容测试覆盖 TXT 编码与文件限制、Unicode 分段、顺序翻译、取消与失败续译、配置快照、原文防覆盖及换行导出；截图覆盖 100%～200% 的像素换算。原生 OCR 和框选实测通过 `YIYI_TEST_NATIVE_OCR=1` 显式启用，使用合成文字；框选测试还需要 Windows 原生平台。
-- PDF 测试覆盖图形像素保留、中文 Unicode 提取、溢出及修复、原文防覆盖、复杂页面保留、校对内容在失败后保留、取消与任务缓存；界面覆盖默认和最小窗口下的翻译、翻页、缩放、段落点击和导出。
-
-自动化测试套件使用临时数据目录与本地模拟服务，不读取个人配置，也不调用付费云端接口。本地 Qwen3.5-2B 的提示词对照与实测，以及此前 0.8B 的记录见 [验证记录](docs/验证记录.md)。真实服务的可用性与模型效果取决于用户的模型、地址和凭据。
-
-完成上述构建后，可用以下开发参数进行隔离预览：
-
-```powershell
-build/Yiyi.exe --data-dir artifacts/manual-test --no-desktop
-build/Yiyi.exe --data-dir artifacts/screenshot-test --smoke-test --theme dark --page settings --screenshot artifacts/settings-dark.png
-build/Yiyi.exe --data-dir artifacts/pdf-test --no-desktop --pdf "C:\path\sample.pdf"
-```
-
-`--no-desktop` 关闭托盘、全局快捷键和划词监测，便于隔离界面测试；`--smoke-test` 或 `--screenshot` 也会自动关闭这些功能。验证桌面功能时省略这些参数，保留独立的 `--data-dir`。
-
-## 工程结构
-
-```text
-src/          AI 请求、存储、桌面集成、截图 OCR 与文档翻译控制
-qml/          工作台、文档翻译、识别校对、历史、设置和通用控件
-assets/       原创 SVG、Windows 图标及版本资源
-tests/        Qt Test 核心、内容处理、界面与 Windows 桌面集成测试
-scripts/      构建、部署与 RapidOCR 原生依赖准备脚本
-tools/        Windows 图标生成与本地模型验证工具
-docs/         使用说明、验证与审查记录、界面预览
-```
-
-`AiClient` 处理各协议和网络生命周期；`AppController` 向 QML 暴露状态与操作；`Storage` 负责持久化。新增服务通常可以直接使用兼容协议，新增协议则扩展 `AiClient`。
-
-`DesktopIntegration` 管理托盘、快捷键和划词浮标；`SelectionCapture` 读取选中文字；`SingleInstance` 按数据目录管理重复启动与窗口唤起。
-
-`DocumentController` 管理文件编码、分段与任务快照；`ScreenshotController` 负责框选、高 DPI 裁剪及原图保留；`OcrService` 启动独立 C++ RapidOCR 工作进程。`VisionController` 管理视觉模型选择、设置快照、流式图片翻译与取消；`AiClient` 适配五种图片请求格式。
-
-`OfficeDocument` 读写 DOCX / PPTX 中的 OOXML 文字与媒体，保留其他 ZIP 部件；`OfficeController` 负责分段请求、进度与草稿缓存、校对和异步导出。开发检查工具 `yiyi_office_check` 使用合成译文验证包的读写，不调用模型。详见 [Word / PPT 翻译说明](docs/Office翻译-0.11.0.md)。
-
-`PdfController` 负责 PDF 任务与段落校对，`pdfpaging.cpp` 调度分批解析，`PdfTaskStore` 用 SQLite 按页保存进度；`pdfrecognition.cpp` 调度分区 AI 识别，`PdfScanLayout` 通过本地检测模型定位文字并清理行级背景；`PdfEngine` 在独立进程中用 PDFium 提取 / 渲染原页，使用 Qt 生成嵌入字体的译文层，再替换原文字对象。导出分片由 `PdfMerge` 使用 qpdf 合成。详见 [PDF 大文档处理](docs/PDF大文档-0.9.0.md)。
-
-`tools/generate_icon.py` 仅用于重新生成 Windows 图标，需要 Pillow；`tools/prepare_pdf_font.py` 仅在准备 PDF 依赖时运行。应用运行不依赖 Python。
-
-可用 `cmake --build --preset windows-mingw --target yiyi_model_check` 构建本地模型验证工具，再运行 `build/yiyi_model_check.exe --model 你的模型ID`。工具默认连接 `http://127.0.0.1:8080/v1`，通过实际 `AppController` 查词并输出 JSON Lines，使用临时配置与历史，不读取个人 API Key。可用 `--target` 指定目标语言、`--translation` 检查文本翻译、`--detailed` 检查完整词条。它只接受回环地址，不参与默认构建、离线测试或发行包。
-
-## 当前范围
-
-已支持 Windows 系统托盘、全局快捷键、划词浮标、截图 OCR、AI 识图取字，以及 TXT、DOCX、PPTX 和 PDF 翻译。Word / PPT 另存为可编辑的原格式文件，旧版 DOC / PPT 需先转换；Word 可能重新分页，PPT 文字溢出与复杂内容需人工校对。
-
-PDF 支持多栏与表格结构校正、扫描页 AI 取字和原位译文；不能安全替换的区域保留原文并附校对清单。图片背景处理不能保证精确复刻。截图 OCR 已携带中英文模型，PDF 扫描页使用所选视觉模型；小字、模糊图片和复杂排版仍可能识别错误。

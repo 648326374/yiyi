@@ -27,9 +27,8 @@ $runtime = Join-Path $output 'qpdf'
 $headers = Join-Path $output 'include\qpdf'
 $licenses = Join-Path $output 'licenses'
 New-Item -ItemType Directory -Force -Path $runtime,$headers,$licenses | Out-Null
-# The library uses the same MinGW runtime DLL names as Qt. Deploy the newer
-# runtime shipped with Qt at the application root (package.ps1), not a second
-# competing runtime in this directory. zlib, JPEG and OpenSSL are linked in.
+# The WinUI worker stages the runtime DLLs from this same qpdf archive beside
+# qpdf.dll. The qpdf binary already includes zlib, JPEG and OpenSSL.
 Copy-Item -LiteralPath (Join-Path $native 'bin\qpdf30.dll') -Destination (Join-Path $runtime 'qpdf.dll') -Force
 Get-ChildItem -LiteralPath (Join-Path $native 'include\qpdf') -File | Copy-Item -Destination $headers -Force
 Get-ChildItem -LiteralPath $PSScriptRoot -Filter 'qpdf-*.txt' -File | Copy-Item -Destination $licenses -Force

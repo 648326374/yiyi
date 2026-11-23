@@ -1,20 +1,16 @@
 # Third-party components
 
-Yiyi dynamically links Qt 6 modules (Core, Gui, Network, Sql, Xml, Concurrent, Qml, Quick, Quick Controls, Svg, and their dependencies) and ships the MinGW runtime libraries required by that Qt build.
+## WinUI and Windows platform
 
-- Qt: https://www.qt.io/licensing/ and https://code.qt.io/
-- Qt source for the corresponding release: https://download.qt.io/archive/qt/
-- GCC runtime licensing and exception: https://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
-- MinGW-w64: https://www.mingw-w64.org/
-- SQLite (Qt SQLite plugin): https://www.sqlite.org/copyright.html
+- C++/WinRT supplies the C++ projection for Windows Runtime APIs. The portable package includes its license as `CppWinRT-LICENSE.txt`. [C++/WinRT source and license](https://github.com/microsoft/cppwinrt)
+- WinUI 3 uses Windows App SDK with the shared Windows App Runtime 2.4 x64. The portable package contains the bootstrap DLL and `WindowsAppSDK-LICENSE.txt`. [Windows App SDK source and license](https://github.com/microsoft/WindowsAppSDK)
+- SQLite storage uses the SQLite implementation supplied by Windows in `winsqlite3.dll`. [SQLite copyright](https://www.sqlite.org/copyright.html)
 
-The deployment script copies license files available in the installed Qt distribution into the `licenses` directory. Qt modules are deployed as separate dynamic libraries. Source code for this application and its build scripts is provided in the project workspace.
-
-The interface uses system-installed fonts; the PDF feature bundles the open-source fonts described below. No Windows font files are redistributed. Project-specific SVG illustrations and icons are original assets in `assets` and `qml/IconPaths.js`.
+The interface uses system fonts. PDF export bundles the open-source fonts described below.
 
 ## Office translation in 0.11.0
 
-- miniz 3.1.0, MIT, copyright RAD Game Tools, Valve Software, Rich Geldreich and Tenacious Software LLC: https://github.com/richgel999/miniz/tree/3.1.0 . Vendored sources and SHA256 provenance are in `third_party/miniz`; a generated `miniz_export.h` supplies the static-library export macro. It is linked statically for OOXML ZIP reading and writing. Its license ships as `licenses/miniz-LICENSE.txt`.
+- miniz 3.1.0, MIT, copyright RAD Game Tools, Valve Software, Rich Geldreich and Tenacious Software LLC. Vendored sources and SHA256 provenance are in `third_party/miniz`. A generated `miniz_export.h` supplies the static-library export macro. The application links miniz statically for OOXML ZIP reading and writing. Its license ships as `Miniz-LICENSE.txt`. [miniz 3.1.0](https://github.com/richgel999/miniz/tree/3.1.0)
 - Word/PPT translation does not require Microsoft Office or LibreOffice. Optional PDF layout preview invokes a user-installed LibreOffice executable; LibreOffice is not bundled. `python-docx`, `python-pptx`, Pillow and lxml are development-only fixture generators and are not runtime dependencies.
 
 ## Local OCR in 0.4.0
@@ -40,4 +36,5 @@ The portable package includes a separate native CPU OCR worker. It needs no Pyth
 ## Large PDF export in 0.9.0
 
 - qpdf 12.2.0, Apache-2.0, copyright Jay Berkenbilt and Manfred Holger: https://github.com/qpdf/qpdf/releases/tag/v12.2.0 . The official mingw64 `qpdf30.dll` is shipped unchanged as `pdf/qpdf/qpdf.dll` and loaded through its C API. It combines translated page contents/resources while retaining the original page identities, catalog, bookmarks, links and annotations. The source release, official binary URL and SHA256 are pinned in `scripts/pdf-dependencies.json`; `scripts/setup-pdf-merge.ps1` prepares the runtime. Its LICENSE and NOTICE are included in `pdf/licenses/qpdf-*`.
-- This qpdf binary statically includes zlib 1.3.1 (zlib license), Independent JPEG Group libjpeg 9f (IJG license), and OpenSSL 3.5.0 (Apache-2.0). Corresponding license texts are shipped in `pdf/licenses/qpdf-zlib-LICENSE.txt`, `qpdf-IJG-LICENSE.txt`, and `qpdf-OpenSSL-LICENSE.txt`. This software is based in part on the work of the Independent JPEG Group. OpenSSL is copyright the OpenSSL Project Authors, https://www.openssl.org/ . qpdf's native crypto implementation and its notices are covered in `qpdf-NOTICE.md`. The MinGW runtime dependencies are the Qt-distributed libraries already described above. No qpdf executable, compiler, or Python runtime is required by the portable application.
+- This qpdf binary statically includes zlib 1.3.1 (zlib license), Independent JPEG Group libjpeg 9f (IJG license), and OpenSSL 3.5.0 (Apache-2.0). Their licenses ship in `pdf/licenses/qpdf-zlib-LICENSE.txt`, `qpdf-IJG-LICENSE.txt`, and `qpdf-OpenSSL-LICENSE.txt`. This software is based in part on the work of the Independent JPEG Group. OpenSSL is copyright the OpenSSL Project Authors. The native qpdf crypto implementation and its notices are covered in `qpdf-NOTICE.md`. [OpenSSL](https://www.openssl.org/)
+- The official qpdf release supplies `libgcc_s_seh-1.dll`, `libstdc++-6.dll`, and `libwinpthread-1.dll`. These binaries ship alongside qpdf in `pdf/qpdf/`. The GCC license, GCC Runtime Library Exception, and winpthreads license ship under `pdf/licenses/`. [GCC runtime licensing](https://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html) · [MinGW-w64](https://www.mingw-w64.org/)

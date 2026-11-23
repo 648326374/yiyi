@@ -1,4 +1,4 @@
-// C ABI separates the MSVC inference runtime from the MinGW Qt application.
+// C ABI shared by the OCR worker and the PDF worker's layout detector.
 // Executed only in the disposable OCR worker, never in the GUI process.
 #include "OcrLite.h"
 #include "DbNet.h"
