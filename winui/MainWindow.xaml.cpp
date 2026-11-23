@@ -5,6 +5,8 @@
 #include "MainWindow.g.cpp"
 #endif
 
+#include <commctrl.h>
+#include <dwmapi.h>
 #include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include <winrt/Microsoft.UI.Xaml.Media.h>
@@ -26,6 +28,32 @@ namespace winrt::Yiyi::WinUI::implementation
 
     namespace
     {
+        LRESULT CALLBACK extendClientToFrame(HWND window, UINT message, WPARAM wParam, LPARAM lParam,
+                                            UINT_PTR id, DWORD_PTR)
+        {
+            if (message == WM_NCDESTROY) RemoveWindowSubclass(window, extendClientToFrame, id);
+            if (message == WM_NCCALCSIZE && lParam && !IsZoomed(window) && !IsIconic(window)) {
+                auto& bounds = wParam ? reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam)->rgrc[0]
+                                      : *reinterpret_cast<RECT*>(lParam);
+                const auto frame = bounds;
+                const auto result = DefSubclassProc(window, message, wParam, lParam);
+                bounds = frame;
+                // WinUI offsets the content host by one physical pixel in a restored window.
+                --bounds.top;
+                return result;
+            }
+            return DefSubclassProc(window, message, wParam, lParam);
+        }
+
+        void hideWindowBorder(HWND window)
+        {
+            constexpr COLORREF border = DWMWA_COLOR_NONE;
+            if (SUCCEEDED(DwmSetWindowAttribute(window, DWMWA_BORDER_COLOR, &border, sizeof(border)))) return;
+            if (SetWindowSubclass(window, extendClientToFrame, 1, 0))
+                SetWindowPos(window, nullptr, 0, 0, 0, 0,
+                    SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+
         constexpr std::wstring_view languages[] = {
             L"自动检测", L"简体中文", L"繁體中文", L"英语", L"日语", L"韩语", L"法语", L"德语",
             L"西班牙语", L"俄语", L"葡萄牙语", L"意大利语", L"阿拉伯语"
@@ -187,7 +215,9 @@ namespace winrt::Yiyi::WinUI::implementation
         InitializeComponent();
         ExtendsContentIntoTitleBar(true);
         SetTitleBar(ShellDragRegion());
-        const auto measuredDpi = GetDpiForWindow(NativeWindowHandle());
+        const auto window = NativeWindowHandle();
+        hideWindowBorder(window);
+        const auto measuredDpi = GetDpiForWindow(window);
         const auto dpi = measuredDpi ? static_cast<int>(measuredDpi) : 96;
         AppWindow().Resize({ MulDiv(1000, dpi, 96), MulDiv(680, dpi, 96) });
         if (const auto presenter = AppWindow().Presenter().try_as<Microsoft::UI::Windowing::IOverlappedPresenter3>()) {

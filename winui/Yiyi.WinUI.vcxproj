@@ -63,7 +63,7 @@
         </ClCompile>
         <Link>
             <SubSystem>Windows</SubSystem>
-            <AdditionalDependencies>crypt32.lib;ole32.lib;shell32.lib;winsqlite3.lib;normaliz.lib;%(AdditionalDependencies)</AdditionalDependencies>
+            <AdditionalDependencies>comctl32.lib;crypt32.lib;dwmapi.lib;ole32.lib;shell32.lib;winsqlite3.lib;normaliz.lib;%(AdditionalDependencies)</AdditionalDependencies>
         </Link>
         <ResourceCompile>
             <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\assets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

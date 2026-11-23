@@ -19,6 +19,7 @@
                 <SolidColorBrush x:Key="NavigationViewDefaultPaneBackground" Color="{ThemeResource YiyiSidebarColor}" />
                 <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="{ThemeResource YiyiSidebarColor}" />
                 <SolidColorBrush x:Key="NavigationViewContentBackground" Color="{ThemeResource YiyiBackgroundColor}" />
+                <Thickness x:Key="NavigationViewBorderThickness">0</Thickness>
                 <StaticResource x:Key="NavigationViewContentGridBorderBrush" ResourceKey="YiyiBorderBrush" />
                 <Thickness x:Key="NavigationViewContentGridBorderThickness">1,0,0,0</Thickness>
                 <CornerRadius x:Key="NavigationViewContentGridCornerRadius">0</CornerRadius>
