@@ -1,0 +1,233 @@
+<Application
+    x:Class="Yiyi.WinUI.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <Color x:Key="YiyiBackgroundColor">#F6F8F6</Color>
+                    <Color x:Key="YiyiSidebarColor">#EEF3EF</Color>
+                    <Color x:Key="YiyiTextColor">#263D32</Color>
+                    <Color x:Key="YiyiMutedColor">#99A69C</Color>
+                    <SolidColorBrush x:Key="YiyiHoverBrush" Color="#E8EEEA" />
+                    <SolidColorBrush x:Key="YiyiAccentTextBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="YiyiAccentStrongBrush" Color="#285E46" />
+                    <SolidColorBrush x:Key="YiyiSurfaceBrush" Color="#FFFFFF" />
+                    <SolidColorBrush x:Key="YiyiSubtleBrush" Color="#F5F8F5" />
+                    <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="#758379" />
+                    <SolidColorBrush x:Key="YiyiBorderBrush" Color="#E4EBE5" />
+                    <SolidColorBrush x:Key="YiyiAccentBrush" Color="#347457" />
+                    <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="#EAF3EC" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Default">
+                    <Color x:Key="YiyiBackgroundColor">#131B18</Color>
+                    <Color x:Key="YiyiSidebarColor">#17221D</Color>
+                    <Color x:Key="YiyiTextColor">#E7EEE9</Color>
+                    <Color x:Key="YiyiMutedColor">#7D9385</Color>
+                    <SolidColorBrush x:Key="YiyiHoverBrush" Color="#2A3A30" />
+                    <SolidColorBrush x:Key="YiyiAccentTextBrush" Color="#14271C" />
+                    <SolidColorBrush x:Key="YiyiAccentStrongBrush" Color="#A1D6B6" />
+                    <SolidColorBrush x:Key="YiyiSurfaceBrush" Color="#1C2721" />
+                    <SolidColorBrush x:Key="YiyiSubtleBrush" Color="#233129" />
+                    <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="#ACBCB1" />
+                    <SolidColorBrush x:Key="YiyiBorderBrush" Color="#324037" />
+                    <SolidColorBrush x:Key="YiyiAccentBrush" Color="#86C5A2" />
+                    <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="#2A4032" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <StaticResource x:Key="YiyiBackgroundColor" ResourceKey="SystemColorWindowColor" />
+                    <StaticResource x:Key="YiyiSidebarColor" ResourceKey="SystemColorWindowColor" />
+                    <StaticResource x:Key="YiyiTextColor" ResourceKey="SystemColorWindowTextColor" />
+                    <StaticResource x:Key="YiyiMutedColor" ResourceKey="SystemColorWindowTextColor" />
+                    <SolidColorBrush x:Key="YiyiHoverBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentStrongBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="YiyiSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="YiyiSubtleBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="YiyiBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+            <SolidColorBrush x:Key="YiyiBackgroundBrush" Color="{ThemeResource YiyiBackgroundColor}" />
+            <SolidColorBrush x:Key="YiyiSidebarBrush" Color="{ThemeResource YiyiSidebarColor}" />
+            <SolidColorBrush x:Key="YiyiTextBrush" Color="{ThemeResource YiyiTextColor}" />
+            <SolidColorBrush x:Key="YiyiMutedBrush" Color="{ThemeResource YiyiMutedColor}" />
+
+            <Style x:Key="YiyiTitle" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+                <Setter Property="FontSize" Value="22" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiTextBrush}" />
+            </Style>
+            <Style x:Key="YiyiBodyLabel" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiSecondaryBrush}" />
+            </Style>
+            <Style x:Key="YiyiCaption" TargetType="TextBlock" BasedOn="{StaticResource YiyiBodyLabel}">
+                <Setter Property="FontSize" Value="10" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiMutedBrush}" />
+            </Style>
+            <Style x:Key="YiyiCard" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource YiyiSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource YiyiBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="12" />
+            </Style>
+            <Style x:Key="YiyiButton" TargetType="Button">
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="CornerRadius" Value="9" />
+                <Setter Property="MinHeight" Value="36" />
+                <Setter Property="Padding" Value="12,5" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiSecondaryBrush}" />
+                <Setter Property="Background" Value="{ThemeResource YiyiSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource YiyiBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Style>
+            <Style x:Key="YiyiGhostButton" TargetType="Button" BasedOn="{StaticResource YiyiButton}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Padding" Value="7,4" />
+                <Setter Property="MinWidth" Value="30" />
+                <Setter Property="MinHeight" Value="30" />
+            </Style>
+            <Style x:Key="YiyiSelectedThemeButton" TargetType="Button" BasedOn="{StaticResource YiyiGhostButton}">
+                <Setter Property="Background" Value="{ThemeResource YiyiAccentSoftBrush}" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiAccentBrush}" />
+            </Style>
+            <Style x:Key="YiyiSoftButton" TargetType="Button" BasedOn="{StaticResource YiyiButton}">
+                <Setter Property="Background" Value="{ThemeResource YiyiAccentSoftBrush}" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiAccentBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="MinHeight" Value="42" />
+                <Setter Property="Padding" Value="16,7" />
+            </Style>
+            <Style x:Key="YiyiPrimaryButton" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="MinHeight" Value="42" />
+                <Setter Property="Background" Value="{ThemeResource YiyiAccentBrush}" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiAccentTextBrush}" />
+                <Setter Property="BorderThickness" Value="0" />
+            </Style>
+            <Style x:Key="YiyiSelect" TargetType="ComboBox">
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="9,5" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiTextBrush}" />
+                <Setter Property="Background" Value="{ThemeResource YiyiSurfaceBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource YiyiBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Style>
+            <Style x:Key="YiyiQuietSelect" TargetType="ComboBox" BasedOn="{StaticResource YiyiSelect}">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="Padding" Value="5,2" />
+            </Style>
+            <Style x:Key="YiyiEditor" TargetType="TextBox">
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiTextBrush}" />
+                <Setter Property="SelectionHighlightColor" Value="{ThemeResource YiyiAccentBrush}" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="0" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="CornerRadius" Value="0" />
+            </Style>
+            <Style x:Key="YiyiNavigationItem" TargetType="NavigationViewItem">
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="CornerRadius" Value="9" />
+            </Style>
+            <Style x:Key="YiyiModeSegment" TargetType="ListViewItem">
+                <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="Foreground" Value="{ThemeResource YiyiSecondaryBrush}" />
+                <Setter Property="MinHeight" Value="30" />
+                <Setter Property="MinWidth" Value="58" />
+                <Setter Property="Margin" Value="0,0,3,0" />
+                <Setter Property="Padding" Value="12,0" />
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListViewItem">
+                            <ListViewItemPresenter CornerRadius="7"
+                                Control.IsTemplateFocusTarget="True" SelectionCheckMarkVisualEnabled="False"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                ContentMargin="{TemplateBinding Padding}"
+                                PointerOverBackground="{ThemeResource YiyiAccentSoftBrush}"
+                                PointerOverForeground="{ThemeResource YiyiAccentBrush}"
+                                PressedBackground="{ThemeResource YiyiAccentSoftBrush}"
+                                SelectedBackground="{ThemeResource YiyiSurfaceBrush}"
+                                SelectedForeground="{ThemeResource YiyiAccentBrush}"
+                                SelectedPointerOverBackground="{ThemeResource YiyiSurfaceBrush}"
+                                SelectedPressedBackground="{ThemeResource YiyiSurfaceBrush}" />
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <ControlTemplate x:Key="YiyiEmptyIllustration" TargetType="ContentControl">
+                <Viewbox Stretch="Uniform" AutomationProperties.AccessibilityView="Raw">
+                    <Canvas Width="240" Height="180">
+                        <Ellipse Canvas.Left="46" Canvas.Top="146" Width="154" Height="20" Fill="#E9EFE6" />
+                        <Ellipse Canvas.Left="59" Canvas.Top="18" Width="130" Height="130" Fill="#F1F5ED" />
+                        <Path Data="M49 60c24-9 48-6 70 7v86c-21-13-46-16-70-7z" Fill="#D4E4D1" Stroke="#A4BDA4" StrokeThickness="1.4" />
+                        <Path Data="M190 60c-24-9-48-6-71 7v86c22-13 47-16 71-7z" Fill="#E5EEDC" Stroke="#A4BDA4" StrokeThickness="1.4" />
+                        <Path Data="M57 52c24-5 43 0 62 11v79c-19-11-38-16-62-11z" Fill="#FFFEF7" Stroke="#C7D7BD" StrokeThickness="1.4" />
+                        <Path Data="M182 52c-24-5-43 0-63 11v79c20-11 39-16 63-11z" Fill="#F6F8EB" Stroke="#C7D7BD" StrokeThickness="1.4" />
+                        <Path Data="M70 76c12 0 23 3 35 9m-35 7c12 0 23 3 35 9m-35 7c10 0 18 2 26 6m39-29c10-6 22-9 34-9m-34 25c10-6 22-9 34-9m-34 25c8-5 16-7 25-8"
+                              Stroke="#BDCEB4" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Path Data="M174 129c4-24 11-42 29-57m-17 25c-13-1-15-11-13-22 11 3 16 10 13 22m8-13c-3-15 5-24 17-29 2 13-4 24-17 29m-16 32c13 1 22-5 26-17-14-3-24 4-26 17"
+                              Fill="#83AD84" Stroke="#719773" StrokeThickness="1.3" StrokeLineJoin="Round" />
+                        <Path Data="M52 39v12m-6-6h12m122-17v9m-4.5-4.5h9" Stroke="#99B792" StrokeThickness="2"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        <Ellipse Canvas.Left="31" Canvas.Top="96" Width="6" Height="6" Fill="#C4D6B8" />
+                        <Ellipse Canvas.Left="202" Canvas.Top="122" Width="6" Height="6" Fill="#C4D6B8" />
+                    </Canvas>
+                </Viewbox>
+            </ControlTemplate>
+            <Style x:Key="YiyiDictionaryMuted" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{ThemeResource YiyiSecondaryBrush}" />
+            </Style>
+            <Style x:Key="YiyiDictionaryText" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{ThemeResource YiyiTextBrush}" />
+            </Style>
+            <Style x:Key="YiyiDictionaryAccent" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{ThemeResource YiyiAccentBrush}" />
+            </Style>
+            <Style x:Key="YiyiDictionaryNote" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource YiyiAccentSoftBrush}" />
+                <Setter Property="CornerRadius" Value="9" />
+                <Setter Property="Padding" Value="14" />
+            </Style>
+            <Style x:Key="YiyiDictionaryPos" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource YiyiAccentSoftBrush}" />
+                <Setter Property="CornerRadius" Value="5" />
+                <Setter Property="Padding" Value="9,5" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+            </Style>
+            <Style x:Key="YiyiDictionaryDivider" TargetType="Border">
+                <Setter Property="Height" Value="1" />
+                <Setter Property="Background" Value="{ThemeResource YiyiBorderBrush}" />
+            </Style>
+            <Style x:Key="YiyiDictionaryExample" TargetType="Border">
+                <Setter Property="BorderBrush" Value="{ThemeResource YiyiAccentSoftBrush}" />
+                <Setter Property="BorderThickness" Value="2,0,0,0" />
+                <Setter Property="Padding" Value="13,0,0,0" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

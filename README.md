@@ -1,12 +1,41 @@
 # 译意 Yiyi
 
-使用 **C++17 + Qt 6 Quick / QML** 开发的 Windows 桌面 AI 翻译词典。界面、应用图标、功能图标和空状态插画均为项目原创矢量设计。
+使用 **C++/WinRT + WinUI 3** 开发的 Windows 桌面 AI 翻译词典。仓库保留 Qt Quick / QML 版作为迁移和回归对照。
 
 当前版本：**0.11.3**。修复词典返回内容的容错解析：附加字段格式错误时保留可可靠解析的释义；完整模式兼容简短文字，简明模式也可提取 JSON 中的释义；无有效译义时不显示或保存原始 JSON。缩短查词提示词，扩展内容改为可选，不增加 AI 请求。Word / PPT 已完成任务可直接点击「重新翻译」，确认后按界面显示的设置从第一段重新开始；默认 build 入口与便携版同步更新。修复 Word / PPT 恢复任务后界面语言与实际请求不一致：控件显示任务真实设置，更改语言、风格或服务前确认清除旧译文，取消时保留结果。新增可编辑的 DOCX / PPTX 翻译，支持段落校对、单段重译、本机进度与草稿恢复、PPT 字号下限和校对清单；可对文档中的图片取字，另存译文无需安装 Office。支持将单个 TXT、DOCX、PPTX 或 PDF 拖入主窗口，自动进入对应页面。PDF 导出先检查全书，不能安全替换的区域保留原文并附页码与原因清单；修复目录点线、密集索引、页码数字误判和导出组件的系统字体发现。PDF 内容校验失败会限次自动重试，持续失败的段落保留原文并记入待校对，后续页面继续；可在段落校对中查看失败返回。修复技术文档的换行代码注释、目录链接下划线、首行缩进与公式旁文字识别；重新解析时保留匹配译文并补查已走过的页码。AI 生成请求默认允许连续 10 分钟无数据响应，PDF 可在翻译设置中调整等待时间，状态栏显示响应阶段与已用时间。PDF 界面精简为两行工具栏与一行状态栏，扫描页可识别后自动翻译，支持统一暂停、重开续接、问题定位，以及整页成功后替换的当前页重译。PDF 取消整份文件大小、页数、字符数和段落数的固定门槛，支持分页解析、暂停续接、按页保存与分批导出。保留多栏、规则/合并/无边框表格、多级及跨页表头，以及可视化结构校正。扫描图片背景可选择自动清理、局部修复、底色框或原图对照；修复需先检查预览再确认。PDF 翻译采用原版式对照：文字页保留原文字位置，扫描页先在本机检测文字区域，再由所选 AI 分段识别、校对、翻译。译文写回原页，保留图片、Logo、分隔线与列表位置，预览和导出一致。支持原文及译文编辑、复制、单段重译、区域与字号调整、保留原文；随包提供中文无衬线和衬线字体。保留简明 / 完整词条、TXT 翻译、本地 RapidOCR 与 AI 识图取字，不使用离线词库。
 
 ![译意翻译工作台](docs/screenshots/translate-light.png)
 
-## 运行
+## WinUI 3 构建与运行
+
+`winui/` 提供 C++/WinRT + WinUI 3 工作台，已接入五种 AI 接口、简明与完整词条、流式翻译、历史与收藏、TXT 和 Word/PPT 文档翻译、截图取字、本地 OCR、AI 识图、托盘、快捷键和划词。拖入单个 TXT、DOCX、PPTX 或 PDF 可进入对应工作区。
+
+PDF 页面支持原文与译文同步预览、当前页或整篇翻译、暂停续接、扫描页 AI 识别、段落校对和结构校正。PDFium 在独立进程中处理原页，译文使用 DirectWrite 排版并嵌入字体。导出尽量保留原页的版式、图片、链接和批注，无法安全替换的区域保留原文并写入检查清单。
+
+两版默认使用 `%LOCALAPPDATA%\Yiyi\Yiyi` 中的 `history.sqlite` 和 `pdf-tasks/`。WinUI 首次启动读取原有 `settings.ini`，之后将设置写入 `settings.json`。API Key 使用当前 Windows 用户的 DPAPI 保护。
+
+x64 ZIP 约 68 MiB，解压约 105 MiB，包含本地 OCR 模型、PDFium、qpdf 及两套 PDF 字体。构建和发布包不依赖 Qt。启动需要共享的 Windows App Runtime 2.4 x64。[Windows App Runtime 2.4 下载](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads/)
+
+开发环境需要 Visual Studio 的「使用 C++ 的桌面开发」工作负载、Windows SDK 10.0.26100.0 和 CMake。首次准备 PDF 依赖需要 Python 3，构建脚本也会准备隔离工作进程及 OCR 运行库。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-winui.ps1 -SmokeTest -Package
+```
+
+构建产物位于 `build/winui/Release/Yiyi.WinUI.exe`，ZIP 位于 `dist/`。解压后从 `Yiyi-WinUI` 目录启动。使用 `--data-dir artifacts/winui-profile --no-desktop` 可在独立目录中运行并关闭托盘、快捷键和划词。
+
+原生回归测试使用 Python 3 和本地模拟服务。
+
+```powershell
+cmake -S winui/tests -B build/winui-tests -G "Visual Studio 18 2026" -A x64
+cmake --build build/winui-tests --config Release
+ctest --test-dir build/winui-tests -C Release --output-on-failure
+cmake -S winui/pdf -B build/winui-pdf -G "Visual Studio 18 2026" -A x64
+cmake --build build/winui-pdf --config Release
+ctest --test-dir build/winui-pdf -C Release --output-on-failure
+```
+
+## 运行 Qt 参考版
 
 便携版位于 `dist/Yiyi/Yiyi.exe`，无需另行设置 Qt 环境变量，分享时复制整个 `dist/Yiyi` 文件夹。常规构建输出为 `build/Yiyi.exe`。更新时先从托盘退出旧版，再启动新文件，避免单实例机制唤回旧进程。
 

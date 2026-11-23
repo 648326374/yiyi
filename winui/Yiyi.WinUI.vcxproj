@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <ItemGroup Label="ProjectConfigurations">
+        <ProjectConfiguration Include="Debug|x64">
+            <Configuration>Debug</Configuration>
+            <Platform>x64</Platform>
+        </ProjectConfiguration>
+        <ProjectConfiguration Include="Release|x64">
+            <Configuration>Release</Configuration>
+            <Platform>x64</Platform>
+        </ProjectConfiguration>
+    </ItemGroup>
+    <PropertyGroup Label="Globals">
+        <ProjectGuid>{7ED951D2-97A4-4A50-9A2B-AD398F3AE16F}</ProjectGuid>
+        <ProjectName>Yiyi.WinUI</ProjectName>
+        <RootNamespace>Yiyi.WinUI</RootNamespace>
+        <TargetName>$(RootNamespace)</TargetName>
+        <AppContainerApplication>false</AppContainerApplication>
+        <Keyword>Win32Proj</Keyword>
+        <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+        <WindowsTargetPlatformMinVersion>10.0.17763.0</WindowsTargetPlatformMinVersion>
+        <UseWinUI>true</UseWinUI>
+        <EnableMsixTooling>true</EnableMsixTooling>
+        <WindowsPackageType>None</WindowsPackageType>
+        <AppxPackage>false</AppxPackage>
+        <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+        <WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
+        <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
+        <CppWinRTOptimized>true</CppWinRTOptimized>
+        <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
+        <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\..\build\winui\obj\</BaseIntermediateOutputPath>
+    </PropertyGroup>
+    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+    <PropertyGroup Label="Configuration">
+        <ConfigurationType>Application</ConfigurationType>
+        <PlatformToolset Condition="'$(VisualStudioVersion)' &gt;= '18.0'">v145</PlatformToolset>
+        <PlatformToolset Condition="'$(PlatformToolset)' == ''">v143</PlatformToolset>
+        <UseDebugLibraries Condition="'$(Configuration)' == 'Debug'">true</UseDebugLibraries>
+        <UseDebugLibraries Condition="'$(Configuration)' == 'Release'">false</UseDebugLibraries>
+        <DesktopCompatible>true</DesktopCompatible>
+        <CharacterSet>Unicode</CharacterSet>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'" Label="Configuration">
+        <WholeProgramOptimization>true</WholeProgramOptimization>
+        <LinkIncremental>false</LinkIncremental>
+    </PropertyGroup>
+    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+    <PropertyGroup>
+        <OutDir>$(MSBuildProjectDirectory)\..\build\winui\$(Configuration)\</OutDir>
+        <IntDir>$(BaseIntermediateOutputPath)$(Configuration)\</IntDir>
+    </PropertyGroup>
+    <ItemDefinitionGroup>
+        <ClCompile>
+            <LanguageStandard>stdcpp20</LanguageStandard>
+            <RuntimeLibrary Condition="'$(Configuration)' == 'Release'">MultiThreaded</RuntimeLibrary>
+            <WarningLevel>Level4</WarningLevel>
+            <PrecompiledHeader>Use</PrecompiledHeader>
+            <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+            <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
+            <AdditionalIncludeDirectories>$(MSBuildProjectDirectory);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+            <PreprocessorDefinitions>NOMINMAX;WIN32_LEAN_AND_MEAN;DISABLE_XAML_GENERATED_MAIN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+            <AdditionalOptions>/bigobj /utf-8 %(AdditionalOptions)</AdditionalOptions>
+        </ClCompile>
+        <Link>
+            <SubSystem>Windows</SubSystem>
+            <AdditionalDependencies>crypt32.lib;ole32.lib;shell32.lib;winsqlite3.lib;normaliz.lib;%(AdditionalDependencies)</AdditionalDependencies>
+        </Link>
+        <ResourceCompile>
+            <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\assets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+        </ResourceCompile>
+    </ItemDefinitionGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Windows.CppWinRT" Version="[3.0.260818.1]" GeneratePathProperty="true" />
+        <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="[2.3.9]" GeneratePathProperty="true" />
+        <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="[2.1.6]" />
+        <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="[2.3.6]" />
+        <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="[2.4.0]" />
+    </ItemGroup>
+    <ItemGroup>
+        <ApplicationDefinition Include="App.xaml" />
+        <Page Include="MainWindow.xaml" />
+        <Midl Include="MainWindow.idl" />
+        <Manifest Include="app.manifest" />
+        <ResourceCompile Include="..\assets\windows.rc" />
+    </ItemGroup>
+    <ItemGroup>
+        <ClInclude Include="App.xaml.h">
+            <DependentUpon>App.xaml</DependentUpon>
+        </ClInclude>
+        <ClInclude Include="DesktopIntegration.h" />
+        <ClInclude Include="Dictionary.h" />
+        <ClInclude Include="DocumentFiles.h" />
+        <ClInclude Include="DocumentTask.h" />
+        <ClInclude Include="DocumentWorkspace.h" />
+        <ClInclude Include="HistoryStore.h" />
+        <ClInclude Include="MainWindow.xaml.h">
+            <DependentUpon>MainWindow.xaml</DependentUpon>
+        </ClInclude>
+        <ClInclude Include="NativeImage.h" />
+        <ClInclude Include="NativePaths.h" />
+        <ClInclude Include="OcrClient.h" />
+        <ClInclude Include="OfficeDocumentNative.h" />
+        <ClInclude Include="OfficeTask.h" />
+        <ClInclude Include="pch.h" />
+        <ClInclude Include="PdfWorkerClient.h" />
+        <ClInclude Include="PdfTask.h" />
+        <ClInclude Include="PdfStructure.h" />
+        <ClInclude Include="PdfTextChecks.h" />
+        <ClInclude Include="SelectionCapture.h" />
+        <ClInclude Include="ScreenshotCapture.h" />
+        <ClInclude Include="ScreenshotDialog.h" />
+        <ClInclude Include="TextClient.h" />
+        <ClInclude Include="WorkspaceSettings.h" />
+        <ClCompile Include="App.xaml.cpp">
+            <DependentUpon>App.xaml</DependentUpon>
+        </ClCompile>
+        <ClCompile Include="DesktopIntegration.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="Dictionary.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="DocumentFiles.cpp;DocumentTask.cpp;DocumentWorkspace.cpp;OfficeTask.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="HistoryStore.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="MainWindow.xaml.cpp">
+            <DependentUpon>MainWindow.xaml</DependentUpon>
+        </ClCompile>
+        <ClCompile Include="MainWindow.Pdf.cpp" />
+        <ClCompile Include="MainWindow.PdfDialogs.cpp" />
+        <ClCompile Include="MainWindow.Settings.cpp" />
+        <ClCompile Include="MainWindow.Desktop.cpp" />
+        <ClCompile Include="MainWindow.Dictionary.cpp" />
+        <ClCompile Include="MainWindow.Documents.cpp" />
+        <ClCompile Include="MainWindow.Screenshot.cpp" />
+        <ClCompile Include="NativeImage.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="OcrClient.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="OfficeDocumentNative.cpp;..\third_party\miniz\miniz.c;..\third_party\miniz\miniz_tdef.c;..\third_party\miniz\miniz_tinfl.c;..\third_party\miniz\miniz_zip.c">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+            <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\third_party\miniz;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+            <PreprocessorDefinitions>MINIZ_NO_STDIO;MINIZ_NO_ZLIB_COMPATIBLE_NAMES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+        </ClCompile>
+        <ClCompile Include="pch.cpp">
+            <PrecompiledHeader>Create</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="PdfWorkerClient.cpp;PdfTask.cpp;PdfStructure.cpp;PdfTextChecks.cpp;pdf\pdftaskstore.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="pdf\pdfworkerfiles.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="SelectionCapture.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="ScreenshotCapture.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="ScreenshotDialog.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="TextClient.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+        <ClCompile Include="WorkspaceSettings.cpp">
+            <PrecompiledHeader>NotUsing</PrecompiledHeader>
+        </ClCompile>
+    </ItemGroup>
+    <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+    <!-- Run the NuGet markup compiler around WinMD generation in this desktop C++ project. -->
+    <PropertyGroup>
+        <BeforeBuildGenerateSourcesTargets>$(BeforeBuildGenerateSourcesTargets);MarkupCompilePass1</BeforeBuildGenerateSourcesTargets>
+        <AfterBuildGenerateSourcesTargets>$(AfterBuildGenerateSourcesTargets);AddWinUIXamlSources</AfterBuildGenerateSourcesTargets>
+        <XamlGeneratedOutputPath>$(GeneratedFilesDir)</XamlGeneratedOutputPath>
+        <XamlMetaDataProviderIdl>$(GeneratedFilesDir)XamlMetaDataProvider.idl</XamlMetaDataProviderIdl>
+        <XamlMetaDataProviderCpp>$(GeneratedFilesDir)XamlMetaDataProvider.cpp</XamlMetaDataProviderCpp>
+    </PropertyGroup>
+    <Target Name="AddWinUIXamlReferences" BeforeTargets="MarkupCompilePass2">
+        <ItemGroup>
+            <WinMDReferenceToCompile Include="@(ReferencePath->WithMetadataValue('Extension', '.winmd'))" />
+        </ItemGroup>
+    </Target>
+    <Target Name="AddWinUIXamlSources" DependsOnTargets="MarkupCompilePass2">
+        <ItemGroup>
+            <ClCompile Include="@(XamlGFiles->WithMetadataValue('Extension', '.cpp')->Distinct());$(XamlGeneratedOutputPath)XamlTypeInfo.Impl.g.cpp;$(GeneratedFilesDir)module.g.cpp" />
+        </ItemGroup>
+    </Target>
+    <Target Name="CompileWinUIXamlMetadataProvider" AfterTargets="CppWinRTComputeXamlGeneratedCompileInputs">
+        <ItemGroup>
+            <ClCompile Update="$(XamlMetaDataProviderCpp)">
+                <CompilerIteration />
+            </ClCompile>
+        </ItemGroup>
+    </Target>
+    <Target Name="CopyWinUIRuntimeFiles" AfterTargets="Build">
+        <Copy SourceFiles="@(_GeneratedXbfFiles->Distinct())" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(PkgMicrosoft_Windows_CppWinRT)\LICENSE;$(PkgMicrosoft_WindowsAppSDK_Foundation)\license.txt"
+              DestinationFiles="$(OutDir)CppWinRT-LICENSE.txt;$(OutDir)WindowsAppSDK-LICENSE.txt" SkipUnchangedFiles="true" />
+    </Target>
+</Project>
