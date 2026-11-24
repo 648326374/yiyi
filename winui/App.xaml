@@ -10,41 +10,68 @@
                     <Color x:Key="YiyiSidebarColor">#EEF3EF</Color>
                     <Color x:Key="YiyiTextColor">#263D32</Color>
                     <Color x:Key="YiyiMutedColor">#99A69C</Color>
-                    <SolidColorBrush x:Key="YiyiHoverBrush" Color="#E8EEEA" />
-                    <SolidColorBrush x:Key="YiyiAccentTextBrush" Color="#FFFFFF" />
-                    <SolidColorBrush x:Key="YiyiAccentStrongBrush" Color="#285E46" />
+                    <Color x:Key="YiyiHoverColor">#E8EEEA</Color>
+                    <Color x:Key="YiyiAccentTextColor">#FFFFFF</Color>
+                    <Color x:Key="YiyiAccentStrongColor">#285E46</Color>
                     <SolidColorBrush x:Key="YiyiSurfaceBrush" Color="#FFFFFF" />
                     <SolidColorBrush x:Key="YiyiSubtleBrush" Color="#F5F8F5" />
-                    <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="#758379" />
-                    <SolidColorBrush x:Key="YiyiBorderBrush" Color="#E4EBE5" />
-                    <SolidColorBrush x:Key="YiyiAccentBrush" Color="#347457" />
-                    <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="#EAF3EC" />
+                    <Color x:Key="YiyiSecondaryColor">#758379</Color>
+                    <Color x:Key="YiyiBorderColor">#E4EBE5</Color>
+                    <Color x:Key="YiyiAccentColor">#347457</Color>
+                    <Color x:Key="YiyiAccentSoftColor">#EAF3EC</Color>
+                    <SolidColorBrush x:Key="YiyiBackgroundBrush" Color="{StaticResource YiyiBackgroundColor}" />
+                    <SolidColorBrush x:Key="YiyiTextBrush" Color="{StaticResource YiyiTextColor}" />
+                    <SolidColorBrush x:Key="YiyiMutedBrush" Color="{StaticResource YiyiMutedColor}" />
+                    <SolidColorBrush x:Key="YiyiHoverBrush" Color="{StaticResource YiyiHoverColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentTextBrush" Color="{StaticResource YiyiAccentTextColor}" />
+                    <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="{StaticResource YiyiSecondaryColor}" />
+                    <SolidColorBrush x:Key="YiyiBorderBrush" Color="{StaticResource YiyiBorderColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentBrush" Color="{StaticResource YiyiAccentColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="{StaticResource YiyiAccentSoftColor}" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Default">
                     <Color x:Key="YiyiBackgroundColor">#131B18</Color>
                     <Color x:Key="YiyiSidebarColor">#17221D</Color>
                     <Color x:Key="YiyiTextColor">#E7EEE9</Color>
                     <Color x:Key="YiyiMutedColor">#7D9385</Color>
-                    <SolidColorBrush x:Key="YiyiHoverBrush" Color="#2A3A30" />
-                    <SolidColorBrush x:Key="YiyiAccentTextBrush" Color="#14271C" />
-                    <SolidColorBrush x:Key="YiyiAccentStrongBrush" Color="#A1D6B6" />
+                    <Color x:Key="YiyiHoverColor">#2A3A30</Color>
+                    <Color x:Key="YiyiAccentTextColor">#14271C</Color>
+                    <Color x:Key="YiyiAccentStrongColor">#A1D6B6</Color>
                     <SolidColorBrush x:Key="YiyiSurfaceBrush" Color="#1C2721" />
                     <SolidColorBrush x:Key="YiyiSubtleBrush" Color="#233129" />
-                    <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="#ACBCB1" />
-                    <SolidColorBrush x:Key="YiyiBorderBrush" Color="#324037" />
-                    <SolidColorBrush x:Key="YiyiAccentBrush" Color="#86C5A2" />
-                    <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="#2A4032" />
+                    <Color x:Key="YiyiSecondaryColor">#ACBCB1</Color>
+                    <Color x:Key="YiyiBorderColor">#324037</Color>
+                    <Color x:Key="YiyiAccentColor">#86C5A2</Color>
+                    <Color x:Key="YiyiAccentSoftColor">#2A4032</Color>
+                    <SolidColorBrush x:Key="YiyiBackgroundBrush" Color="{StaticResource YiyiBackgroundColor}" />
+                    <SolidColorBrush x:Key="YiyiTextBrush" Color="{StaticResource YiyiTextColor}" />
+                    <SolidColorBrush x:Key="YiyiMutedBrush" Color="{StaticResource YiyiMutedColor}" />
+                    <SolidColorBrush x:Key="YiyiHoverBrush" Color="{StaticResource YiyiHoverColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentTextBrush" Color="{StaticResource YiyiAccentTextColor}" />
+                    <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="{StaticResource YiyiSecondaryColor}" />
+                    <SolidColorBrush x:Key="YiyiBorderBrush" Color="{StaticResource YiyiBorderColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentBrush" Color="{StaticResource YiyiAccentColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="{StaticResource YiyiAccentSoftColor}" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
                     <StaticResource x:Key="YiyiBackgroundColor" ResourceKey="SystemColorWindowColor" />
                     <StaticResource x:Key="YiyiSidebarColor" ResourceKey="SystemColorWindowColor" />
                     <StaticResource x:Key="YiyiTextColor" ResourceKey="SystemColorWindowTextColor" />
                     <StaticResource x:Key="YiyiMutedColor" ResourceKey="SystemColorWindowTextColor" />
-                    <SolidColorBrush x:Key="YiyiHoverBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
-                    <SolidColorBrush x:Key="YiyiAccentTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
-                    <SolidColorBrush x:Key="YiyiAccentStrongBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <StaticResource x:Key="YiyiHoverColor" ResourceKey="SystemColorButtonFaceColor" />
+                    <StaticResource x:Key="YiyiAccentTextColor" ResourceKey="SystemColorHighlightTextColor" />
+                    <StaticResource x:Key="YiyiAccentStrongColor" ResourceKey="SystemColorHighlightColor" />
                     <SolidColorBrush x:Key="YiyiSurfaceBrush" Color="{ThemeResource SystemColorWindowColor}" />
                     <SolidColorBrush x:Key="YiyiSubtleBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <StaticResource x:Key="YiyiSecondaryColor" ResourceKey="SystemColorWindowTextColor" />
+                    <StaticResource x:Key="YiyiBorderColor" ResourceKey="SystemColorWindowTextColor" />
+                    <StaticResource x:Key="YiyiAccentColor" ResourceKey="SystemColorWindowTextColor" />
+                    <StaticResource x:Key="YiyiAccentSoftColor" ResourceKey="SystemColorWindowColor" />
+                    <SolidColorBrush x:Key="YiyiBackgroundBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="YiyiTextBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="YiyiMutedBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="YiyiHoverBrush" Color="{ThemeResource SystemColorButtonFaceColor}" />
+                    <SolidColorBrush x:Key="YiyiAccentTextBrush" Color="{ThemeResource SystemColorHighlightTextColor}" />
                     <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="YiyiBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="YiyiAccentBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
@@ -54,10 +81,6 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
-            <SolidColorBrush x:Key="YiyiBackgroundBrush" Color="{ThemeResource YiyiBackgroundColor}" />
-            <SolidColorBrush x:Key="YiyiSidebarBrush" Color="{ThemeResource YiyiSidebarColor}" />
-            <SolidColorBrush x:Key="YiyiTextBrush" Color="{ThemeResource YiyiTextColor}" />
-            <SolidColorBrush x:Key="YiyiMutedBrush" Color="{ThemeResource YiyiMutedColor}" />
 
             <Style x:Key="YiyiTitle" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
@@ -136,8 +159,8 @@
                 <Setter Property="Padding" Value="5,2" />
             </Style>
             <Style x:Key="YiyiEditor" TargetType="TextBox">
-                <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
-                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI" />
+                <Setter Property="FontSize" Value="14" />
                 <Setter Property="Foreground" Value="{ThemeResource YiyiTextBrush}" />
                 <Setter Property="SelectionHighlightColor" Value="{ThemeResource YiyiAccentBrush}" />
                 <Setter Property="Background" Value="Transparent" />

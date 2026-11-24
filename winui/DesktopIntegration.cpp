@@ -1,4 +1,5 @@
 #include "DesktopIntegration.h"
+#include "../assets/resource.h"
 
 #include <bcrypt.h>
 #include <commctrl.h>
@@ -44,8 +45,10 @@ constexpr UINT_PTR selectDelayTimer = 1;
 constexpr UINT_PTR selectPollTimer = 2;
 constexpr UINT_PTR bubbleTimer = 3;
 constexpr UINT_PTR closeSubclassId = 1;
-constexpr int bubbleWidth = 108;
-constexpr int bubbleHeight = 36;
+constexpr wchar_t bubbleCaption[] = L"查询选中文字";
+constexpr int bubbleWidth = 118;
+constexpr int bubbleHeight = 34;
+constexpr int bubbleRadius = 8;
 
 enum MenuCommand : UINT_PTR { OpenWorkspace = 1, Screenshot, Settings, ToggleSelection, Quit, AcceptSelection };
 
@@ -511,6 +514,7 @@ struct DesktopIntegration::State {
     void processMouse(UINT event, POINT point);
     void pollSelection();
     void showBubble(const SelectionResult& result);
+    void paintBubbleButton(const DRAWITEMSTRUCT& item) const;
     void dismissBubble();
     void selectBubble();
     void onTimer(UINT_PTR timer);
@@ -518,6 +522,7 @@ struct DesktopIntegration::State {
 
     static LRESULT CALLBACK brokerProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
     static LRESULT CALLBACK bubbleProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam);
+    static LRESULT CALLBACK bubbleButtonProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, UINT_PTR id, DWORD_PTR reference);
     static LRESULT CALLBACK closeProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam, UINT_PTR id, DWORD_PTR state);
     static LRESULT CALLBACK mouseProc(int code, WPARAM event, LPARAM pointer);
     static thread_local State* hookOwner;
@@ -526,6 +531,9 @@ struct DesktopIntegration::State {
     HWND broker = nullptr;
     HWND bubble = nullptr;
     HWND bubbleButton = nullptr;
+    COLORREF bubbleBackground = GetSysColor(COLOR_HIGHLIGHT);
+    COLORREF bubbleHover = GetSysColor(COLOR_HIGHLIGHT);
+    COLORREF bubbleForeground = GetSysColor(COLOR_HIGHLIGHTTEXT);
     std::filesystem::path directory;
     std::wstring channel;
     DesktopCallbacks callbacks;
@@ -556,6 +564,7 @@ struct DesktopIntegration::State {
     ULONGLONG bubbleDeadline = 0;
     bool pressed = false;
     bool doubleClick = false;
+    bool bubbleHovered = false;
     std::wstring bubbleText;
 };
 
@@ -605,16 +614,23 @@ bool DesktopIntegration::State::start()
 
 void DesktopIntegration::State::addTrayIcon()
 {
+    trayReady = false;
+    trayVersion4 = false;
+    const auto icon = static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(IDI_YIYI), IMAGE_ICON,
+        GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), 0));
+    if (!icon) return;
+
     tray = {};
     tray.cbSize = sizeof(tray);
     tray.hWnd = broker;
     tray.uID = trayId;
     tray.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP | NIF_SHOWTIP;
     tray.uCallbackMessage = trayMessage;
-    tray.hIcon = LoadIconW(GetModuleHandleW(nullptr), MAKEINTRESOURCEW(1));
-    if (!tray.hIcon) tray.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
+    tray.hIcon = icon;
     wcscpy_s(tray.szTip, L"译意 · AI 翻译词典");
     trayReady = Shell_NotifyIconW(NIM_ADD, &tray) != FALSE;
+    DestroyIcon(icon);
+    tray.hIcon = nullptr;
     tray.uVersion = NOTIFYICON_VERSION_4;
     trayVersion4 = trayReady && Shell_NotifyIconW(NIM_SETVERSION, &tray);
 }
@@ -835,20 +851,19 @@ void DesktopIntegration::State::showBubble(const SelectionResult& result)
         klass.lpfnWndProc = bubbleProc;
         klass.hInstance = instance;
         klass.hCursor = LoadCursor(nullptr, IDC_HAND);
-        klass.hbrBackground = GetSysColorBrush(COLOR_WINDOW);
         klass.lpszClassName = bubbleClass;
         if (!RegisterClassW(&klass) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) return;
         bubble = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE, bubbleClass, L"译意划词",
-            WS_POPUP | WS_BORDER, release.x, release.y, bubbleWidth, bubbleHeight, nullptr, nullptr, instance, this);
+            WS_POPUP, release.x, release.y, bubbleWidth, bubbleHeight, nullptr, nullptr, instance, this);
         if (!bubble) return;
-        bubbleButton = CreateWindowExW(0, L"BUTTON", L"查询选中文字", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        bubbleButton = CreateWindowExW(0, L"BUTTON", bubbleCaption, WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
             0, 0, bubbleWidth, bubbleHeight, bubble, reinterpret_cast<HMENU>(AcceptSelection), instance, nullptr);
         if (!bubbleButton) {
             DestroyWindow(bubble);
             bubble = nullptr;
             return;
         }
-        SendMessageW(bubbleButton, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
+        SetWindowSubclass(bubbleButton, bubbleButtonProc, 1, reinterpret_cast<DWORD_PTR>(this));
     }
 
     MONITORINFO monitor{};
@@ -857,9 +872,13 @@ void DesktopIntegration::State::showBubble(const SelectionResult& result)
     SetWindowPos(bubble, HWND_TOPMOST, release.x, release.y, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE);
     const auto dpi = static_cast<int>(GetDpiForWindow(bubble));
     const int width = MulDiv(bubbleWidth, dpi, 96), height = MulDiv(bubbleHeight, dpi, 96);
-    const auto x = std::clamp(release.x + 12, monitor.rcWork.left, std::max(monitor.rcWork.left, monitor.rcWork.right - width));
-    const auto y = std::clamp(release.y + 18, monitor.rcWork.top, std::max(monitor.rcWork.top, monitor.rcWork.bottom - height));
-    MoveWindow(bubbleButton, 0, 0, width - 2, height - 2, TRUE);
+    const auto x = std::clamp(release.x + MulDiv(12, dpi, 96), monitor.rcWork.left, std::max(monitor.rcWork.left, monitor.rcWork.right - width));
+    const auto y = std::clamp(release.y + MulDiv(18, dpi, 96), monitor.rcWork.top, std::max(monitor.rcWork.top, monitor.rcWork.bottom - height));
+    const int diameter = MulDiv(2 * bubbleRadius, dpi, 96);
+    if (const auto region = CreateRoundRectRgn(0, 0, width, height, diameter, diameter)) {
+        if (!SetWindowRgn(bubble, region, FALSE)) DeleteObject(region);
+    }
+    MoveWindow(bubbleButton, 0, 0, width, height, TRUE);
     bubbleSource = result.source;
     bubbleText = result.text;
     bubbleDeadline = GetTickCount64() + 8000;
@@ -867,10 +886,47 @@ void DesktopIntegration::State::showBubble(const SelectionResult& result)
     SetTimer(broker, bubbleTimer, 150, nullptr);
 }
 
+void DesktopIntegration::State::paintBubbleButton(const DRAWITEMSTRUCT& item) const
+{
+    const auto dc = item.hDC;
+    const auto saved = SaveDC(dc);
+    if (!saved) return;
+    HIGHCONTRASTW contrast{sizeof(contrast)};
+    const bool highContrast = SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
+        (contrast.dwFlags & HCF_HIGHCONTRASTON);
+    const bool hover = bubbleHovered && !(item.itemState & ODS_SELECTED);
+    SetDCBrushColor(dc, highContrast ? GetSysColor(COLOR_HIGHLIGHT) : hover ? bubbleHover : bubbleBackground);
+    FillRect(dc, &item.rcItem, static_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, highContrast ? GetSysColor(COLOR_HIGHLIGHTTEXT) : bubbleForeground);
+
+    const int dpi = static_cast<int>(GetDpiForWindow(item.hwndItem));
+    const auto font = [dpi](int size, int weight, const wchar_t* family) {
+        return CreateFontW(-MulDiv(size, dpi, 96), 0, 0, 0, weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
+            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, family);
+    };
+    const auto iconFont = font(14, FW_NORMAL, L"Segoe MDL2 Assets");
+    const auto textFont = font(12, FW_SEMIBOLD, L"Microsoft YaHei UI");
+    auto label = item.rcItem;
+    label.left += MulDiv(10, dpi, 96);
+    if (iconFont) {
+        SelectObject(dc, iconFont);
+        RECT icon{label.left, label.top, label.left + MulDiv(16, dpi, 96), label.bottom};
+        DrawTextW(dc, L"\uE8C1", 1, &icon, DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+        label.left = icon.right + MulDiv(5, dpi, 96);
+    }
+    SelectObject(dc, textFont ? textFont : GetStockObject(DEFAULT_GUI_FONT));
+    DrawTextW(dc, bubbleCaption, -1, &label, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
+    RestoreDC(dc, saved);
+    if (iconFont) DeleteObject(iconFont);
+    if (textFont) DeleteObject(textFont);
+}
+
 void DesktopIntegration::State::dismissBubble()
 {
     if (broker) KillTimer(broker, bubbleTimer);
     if (bubble) ShowWindow(bubble, SW_HIDE);
+    bubbleHovered = false;
     bubbleSource = nullptr;
     bubbleText.clear();
 }
@@ -950,6 +1006,11 @@ LRESULT CALLBACK DesktopIntegration::State::bubbleProc(HWND hwnd, UINT message, 
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(info->lpCreateParams));
     }
     if (message == WM_MOUSEACTIVATE) return MA_NOACTIVATE;
+    if (message == WM_DRAWITEM && wparam == AcceptSelection) {
+        const auto state = reinterpret_cast<State*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+        if (state) state->paintBubbleButton(*reinterpret_cast<const DRAWITEMSTRUCT*>(lparam));
+        return TRUE;
+    }
     if (message == WM_COMMAND && LOWORD(wparam) == AcceptSelection && HIWORD(wparam) == BN_CLICKED) {
         const auto state = reinterpret_cast<State*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
         if (state) {
@@ -959,6 +1020,37 @@ LRESULT CALLBACK DesktopIntegration::State::bubbleProc(HWND hwnd, UINT message, 
         return 0;
     }
     return DefWindowProcW(hwnd, message, wparam, lparam);
+}
+
+LRESULT CALLBACK DesktopIntegration::State::bubbleButtonProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam,
+                                                             UINT_PTR id, DWORD_PTR reference)
+{
+    const auto state = reinterpret_cast<State*>(reference);
+    switch (message) {
+    case WM_ERASEBKGND:
+        return TRUE;
+    case WM_SETCURSOR:
+        SetCursor(LoadCursor(nullptr, IDC_HAND));
+        return TRUE;
+    case WM_MOUSEMOVE:
+        if (!state->bubbleHovered) {
+            TRACKMOUSEEVENT tracking{sizeof(tracking), TME_LEAVE, hwnd, 0};
+            if (TrackMouseEvent(&tracking)) {
+                state->bubbleHovered = true;
+                InvalidateRect(hwnd, nullptr, FALSE);
+            }
+        }
+        break;
+    case WM_MOUSELEAVE:
+        state->bubbleHovered = false;
+        InvalidateRect(hwnd, nullptr, FALSE);
+        break;
+    case WM_NCDESTROY:
+        RemoveWindowSubclass(hwnd, bubbleButtonProc, id);
+        state->bubbleButton = nullptr;
+        break;
+    }
+    return DefSubclassProc(hwnd, message, wparam, lparam);
 }
 
 LRESULT CALLBACK DesktopIntegration::State::closeProc(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam,
@@ -1009,6 +1101,14 @@ void DesktopIntegration::setCloseToTray(bool enabled)
 }
 
 void DesktopIntegration::setSelectionEnabled(bool enabled) { m_state->setSelectionEnabled(enabled); }
+
+void DesktopIntegration::setSelectionBubbleColors(COLORREF background, COLORREF hover, COLORREF foreground)
+{
+    m_state->bubbleBackground = background;
+    m_state->bubbleHover = hover;
+    m_state->bubbleForeground = foreground;
+    if (m_state->bubbleButton) InvalidateRect(m_state->bubbleButton, nullptr, FALSE);
+}
 
 bool DesktopIntegration::applyShortcuts(bool enabled, std::wstring_view show, std::wstring_view selection)
 {

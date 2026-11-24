@@ -319,15 +319,12 @@ void DocumentWorkspace::build()
                 <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
                 <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
-                <StaticResource x:Key="TextControlForegroundFocused" ResourceKey="YiyiTextBrush" />
-                <StaticResource x:Key="TextControlPlaceholderForeground" ResourceKey="YiyiMutedBrush" />
-                <StaticResource x:Key="TextControlPlaceholderForegroundFocused" ResourceKey="YiyiMutedBrush" />
+                <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="{ThemeResource YiyiTextColor}" />
+                <SolidColorBrush x:Key="TextControlForegroundFocused" Color="{ThemeResource YiyiTextColor}" />
+                <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{ThemeResource YiyiMutedColor}" />
+                <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{ThemeResource YiyiMutedColor}" />
                 <StaticResource x:Key="ProgressBarForeground" ResourceKey="YiyiAccentBrush" />
                 <StaticResource x:Key="ProgressBarBackground" ResourceKey="YiyiBorderBrush" />
-                <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="YiyiAccentStrongBrush" />
-                <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="YiyiAccentBrush" />
-                <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="YiyiAccentTextBrush" />
-                <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="YiyiAccentTextBrush" />
             </Grid.Resources>
         </Grid>)").as<Grid>();
     m_root.RowSpacing(10);

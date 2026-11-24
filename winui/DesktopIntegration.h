@@ -65,6 +65,7 @@ public:
     const std::wstring& selectionError() const;
     void setCloseToTray(bool enabled);
     void setSelectionEnabled(bool enabled);
+    void setSelectionBubbleColors(COLORREF background, COLORREF hover, COLORREF foreground);
     bool applyShortcuts(bool enabled, std::wstring_view show, std::wstring_view selection);
     static std::wstring normalizedShortcut(std::wstring_view text);
     void setRecordingShortcut(bool recording);

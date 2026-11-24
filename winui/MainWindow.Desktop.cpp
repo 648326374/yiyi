@@ -32,6 +32,18 @@ namespace winrt::Yiyi::WinUI::implementation
             label.Text(hstring(text));
             label.Visibility(text.empty() ? Visibility::Collapsed : Visibility::Visible);
         }
+
+        void updateSelectionBubbleTheme(::yiyi::DesktopIntegration& desktop, ElementTheme theme)
+        {
+            const auto key = theme == ElementTheme::Dark ? L"Default" : L"Light";
+            const auto palette = Application::Current().Resources().ThemeDictionaries().Lookup(box_value(key)).as<ResourceDictionary>();
+            const auto color = [&](hstring const& name) {
+                const auto value = unbox_value<Windows::UI::Color>(palette.Lookup(box_value(name)));
+                return RGB(value.R, value.G, value.B);
+            };
+            desktop.setSelectionBubbleColors(color(L"YiyiAccentColor"), color(L"YiyiAccentStrongColor"),
+                                             color(L"YiyiAccentTextColor"));
+        }
     }
 
     void MainWindow::StartDesktop(std::wstring channel)
@@ -58,6 +70,11 @@ namespace winrt::Yiyi::WinUI::implementation
             if (const auto self = weak.get()) self->recordDesktopShortcut(text);
         };
         m_desktop = std::make_unique<::yiyi::DesktopIntegration>(window, m_dataDirectory, std::move(channel), std::move(callbacks));
+        updateSelectionBubbleTheme(*m_desktop, Workspace().ActualTheme());
+        Workspace().ActualThemeChanged([weak](FrameworkElement const& sender, IInspectable const&) {
+            if (const auto self = weak.get(); self && self->m_desktop)
+                updateSelectionBubbleTheme(*self->m_desktop, sender.ActualTheme());
+        });
         if (!m_desktop->start()) notice(L"无法初始化桌面集成，仍可在工作台翻译。", InfoBarSeverity::Warning);
         refreshDesktopSettings();
         Closed([weak](auto const&, auto const&) { if (const auto self = weak.get()) self->m_desktop.reset(); });

@@ -5,6 +5,16 @@
     Title="译意 · AI 翻译词典">
     <Grid x:Name="Workspace" AllowDrop="True" DragOver="ImportDragOver" Drop="ImportDrop"
           Background="{ThemeResource YiyiBackgroundBrush}">
+        <Grid.Resources>
+            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="{ThemeResource YiyiHoverColor}" />
+            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="{ThemeResource YiyiTextColor}" />
+            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="{ThemeResource YiyiAccentSoftColor}" />
+            <SolidColorBrush x:Key="ButtonForegroundPressed" Color="{ThemeResource YiyiTextColor}" />
+            <SolidColorBrush x:Key="AccentButtonBackgroundPointerOver" Color="{ThemeResource YiyiAccentStrongColor}" />
+            <SolidColorBrush x:Key="AccentButtonForegroundPointerOver" Color="{ThemeResource YiyiAccentTextColor}" />
+            <SolidColorBrush x:Key="AccentButtonBackgroundPressed" Color="{ThemeResource YiyiAccentColor}" />
+            <SolidColorBrush x:Key="AccentButtonForegroundPressed" Color="{ThemeResource YiyiAccentTextColor}" />
+        </Grid.Resources>
         <NavigationView
             x:Name="Navigation"
             IsBackButtonVisible="Collapsed"
@@ -20,18 +30,21 @@
                 <SolidColorBrush x:Key="NavigationViewExpandedPaneBackground" Color="{ThemeResource YiyiSidebarColor}" />
                 <SolidColorBrush x:Key="NavigationViewContentBackground" Color="{ThemeResource YiyiBackgroundColor}" />
                 <Thickness x:Key="NavigationViewBorderThickness">0</Thickness>
-                <StaticResource x:Key="NavigationViewContentGridBorderBrush" ResourceKey="YiyiBorderBrush" />
+                <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="{ThemeResource YiyiBorderColor}" />
                 <Thickness x:Key="NavigationViewContentGridBorderThickness">1,0,0,0</Thickness>
                 <CornerRadius x:Key="NavigationViewContentGridCornerRadius">0</CornerRadius>
-                <StaticResource x:Key="NavigationViewItemForeground" ResourceKey="YiyiSecondaryBrush" />
-                <StaticResource x:Key="NavigationViewItemForegroundPointerOver" ResourceKey="YiyiTextBrush" />
-                <StaticResource x:Key="NavigationViewItemForegroundPressed" ResourceKey="YiyiAccentBrush" />
-                <StaticResource x:Key="NavigationViewItemForegroundSelected" ResourceKey="YiyiAccentBrush" />
-                <StaticResource x:Key="NavigationViewItemForegroundSelectedPointerOver" ResourceKey="YiyiAccentBrush" />
-                <StaticResource x:Key="NavigationViewItemBackgroundPointerOver" ResourceKey="YiyiHoverBrush" />
-                <StaticResource x:Key="NavigationViewItemBackgroundSelected" ResourceKey="YiyiAccentSoftBrush" />
-                <StaticResource x:Key="NavigationViewItemBackgroundSelectedPointerOver" ResourceKey="YiyiAccentSoftBrush" />
-                <StaticResource x:Key="NavigationViewItemSeparatorForeground" ResourceKey="YiyiBorderBrush" />
+                <SolidColorBrush x:Key="NavigationViewItemForeground" Color="{ThemeResource YiyiSecondaryColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemForegroundPointerOver" Color="{ThemeResource YiyiTextColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemForegroundPressed" Color="{ThemeResource YiyiAccentColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemForegroundSelected" Color="{ThemeResource YiyiAccentColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemForegroundSelectedPointerOver" Color="{ThemeResource YiyiAccentColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemForegroundSelectedPressed" Color="{ThemeResource YiyiAccentColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemBackgroundPointerOver" Color="{ThemeResource YiyiHoverColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemBackgroundPressed" Color="{ThemeResource YiyiAccentSoftColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemBackgroundSelected" Color="{ThemeResource YiyiAccentSoftColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemBackgroundSelectedPointerOver" Color="{ThemeResource YiyiAccentSoftColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemBackgroundSelectedPressed" Color="{ThemeResource YiyiHoverColor}" />
+                <SolidColorBrush x:Key="NavigationViewItemSeparatorForeground" Color="{ThemeResource YiyiBorderColor}" />
                 <SolidColorBrush x:Key="NavigationViewSelectionIndicatorForeground" Color="Transparent" />
                 <x:Double x:Key="NavigationViewPaneHeaderRowMinHeight">0</x:Double>
                 <x:Double x:Key="NavigationViewItemOnLeftMinHeight">42</x:Double>
@@ -147,13 +160,10 @@
                         <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
                         <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
                         <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+                        <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="{ThemeResource YiyiTextColor}" />
                         <SolidColorBrush x:Key="TextControlForegroundFocused" Color="{ThemeResource YiyiTextColor}" />
                         <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{ThemeResource YiyiMutedColor}" />
                         <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{ThemeResource YiyiMutedColor}" />
-                        <StaticResource x:Key="AccentButtonBackgroundPointerOver" ResourceKey="YiyiAccentStrongBrush" />
-                        <StaticResource x:Key="AccentButtonBackgroundPressed" ResourceKey="YiyiAccentBrush" />
-                        <StaticResource x:Key="AccentButtonForegroundPointerOver" ResourceKey="YiyiAccentTextBrush" />
-                        <StaticResource x:Key="AccentButtonForegroundPressed" ResourceKey="YiyiAccentTextBrush" />
                     </Grid.Resources>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="40" />
@@ -334,7 +344,7 @@
                                 </Grid>
                                 <Border Grid.Row="1" Background="{ThemeResource YiyiBorderBrush}" />
                                 <Grid Grid.Row="2">
-                                    <TextBox x:Name="ResultText" Margin="20,16,17,10" Style="{StaticResource YiyiEditor}" FontSize="16"
+                                    <TextBox x:Name="ResultText" Margin="20,16,17,10" Style="{StaticResource YiyiEditor}"
                                              AutomationProperties.Name="译文" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
                                              ScrollViewer.VerticalScrollBarVisibility="Auto" />
                                     <ScrollViewer x:Name="DictionaryScroll" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
@@ -396,8 +406,8 @@
                     </Grid.RowDefinitions>
                     <Grid ColumnSpacing="12">
                         <Grid.Resources>
-                            <StaticResource x:Key="TextControlPlaceholderForeground" ResourceKey="YiyiMutedBrush" />
-                            <StaticResource x:Key="TextControlPlaceholderForegroundFocused" ResourceKey="YiyiMutedBrush" />
+                            <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{ThemeResource YiyiMutedColor}" />
+                            <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{ThemeResource YiyiMutedColor}" />
                         </Grid.Resources>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
