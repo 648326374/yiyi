@@ -4,8 +4,10 @@
 #include "MainWindow.xaml.h"
 
 #include <shellapi.h>
+#ifndef MICROSOFT_WINDOWSAPPSDK_SELFCONTAINED
 #include <WindowsAppSDK-VersionInfo.h>
 #include <MddBootstrap.h>
+#endif
 
 #include <chrono>
 #include <cstdio>
@@ -66,6 +68,7 @@ namespace
         return options;
     }
 
+#ifndef MICROSOFT_WINDOWSAPPSDK_SELFCONTAINED
     struct RuntimeLifetime
     {
         ~RuntimeLifetime()
@@ -73,6 +76,7 @@ namespace
             MddBootstrapShutdown();
         }
     };
+#endif
 }
 
 namespace winrt::Yiyi::WinUI::implementation
@@ -138,6 +142,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
                 return 1;
             }
         }
+#ifndef MICROSOFT_WINDOWSAPPSDK_SELFCONTAINED
         const HRESULT status = MddBootstrapInitialize2(
             WINDOWSAPPSDK_RELEASE_MAJORMINOR, WINDOWSAPPSDK_RELEASE_VERSION_TAG_W,
             PACKAGE_VERSION{ WINDOWSAPPSDK_RUNTIME_VERSION_UINT64 }, MddBootstrapInitializeOptions_None);
@@ -145,12 +150,14 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
             wchar_t code[11]{};
             swprintf_s(code, L"0x%08lX", static_cast<unsigned long>(status));
             const auto message = std::wstring(L"无法初始化 Windows App Runtime（") + code +
-                L"）。请安装完整的 Windows App Runtime 2.4 或更高的 2.x 版本（x64），然后重新启动译意。\n"
+                L"）。可解压并运行自带运行时的便携包（文件名含 self-contained）。\n"
+                L"使用精简包时，请安装或修复 Windows App Runtime 2.4 或更高的 2.x 版本（x64）。\n"
                 L"https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads/";
             reportStartupError(message, options.smokeTest);
             return 2;
         }
         const RuntimeLifetime runtime;
+#endif
         int exitCode = options.smokeTest ? 1 : 0;
         winrt::Microsoft::UI::Xaml::Application::Start([&](auto const&) {
             try {

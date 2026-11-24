@@ -23,12 +23,14 @@
         <EnableMsixTooling>true</EnableMsixTooling>
         <WindowsPackageType>None</WindowsPackageType>
         <AppxPackage>false</AppxPackage>
-        <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained>
+        <WindowsAppSDKSelfContained Condition="'$(WindowsAppSDKSelfContained)' == ''">false</WindowsAppSDKSelfContained>
         <WindowsAppSdkBootstrapInitialize>false</WindowsAppSdkBootstrapInitialize>
         <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
         <CppWinRTOptimized>true</CppWinRTOptimized>
         <CppWinRTRootNamespaceAutoMerge>true</CppWinRTRootNamespaceAutoMerge>
-        <BaseIntermediateOutputPath>$(MSBuildProjectDirectory)\..\build\winui\obj\</BaseIntermediateOutputPath>
+        <YiyiBuildDirectory>$(MSBuildProjectDirectory)\..\build\winui</YiyiBuildDirectory>
+        <YiyiBuildDirectory Condition="'$(WindowsAppSDKSelfContained)' == 'true'">$(MSBuildProjectDirectory)\..\build\winui-self-contained</YiyiBuildDirectory>
+        <BaseIntermediateOutputPath>$(YiyiBuildDirectory)\obj\</BaseIntermediateOutputPath>
     </PropertyGroup>
     <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
     <PropertyGroup Label="Configuration">
@@ -46,7 +48,7 @@
     </PropertyGroup>
     <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
     <PropertyGroup>
-        <OutDir>$(MSBuildProjectDirectory)\..\build\winui\$(Configuration)\</OutDir>
+        <OutDir>$(YiyiBuildDirectory)\$(Configuration)\</OutDir>
         <IntDir>$(BaseIntermediateOutputPath)$(Configuration)\</IntDir>
     </PropertyGroup>
     <ItemDefinitionGroup>
@@ -74,7 +76,7 @@
         <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="[2.3.9]" GeneratePathProperty="true" />
         <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="[2.1.6]" />
         <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="[2.3.6]" />
-        <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="[2.4.0]" />
+        <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="[2.4.0]" GeneratePathProperty="true" />
     </ItemGroup>
     <ItemGroup>
         <ApplicationDefinition Include="App.xaml" />
@@ -202,5 +204,14 @@
         <Copy SourceFiles="@(_GeneratedXbfFiles->Distinct())" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
         <Copy SourceFiles="$(PkgMicrosoft_Windows_CppWinRT)\LICENSE;$(PkgMicrosoft_WindowsAppSDK_Foundation)\license.txt"
               DestinationFiles="$(OutDir)CppWinRT-LICENSE.txt;$(OutDir)WindowsAppSDK-LICENSE.txt" SkipUnchangedFiles="true" />
+    </Target>
+    <Target Name="RecordAppLocalRuntimeFiles" AfterTargets="CopyWinUIRuntimeFiles" Condition="'$(WindowsAppSDKSelfContained)' == 'true'">
+        <ItemGroup>
+            <_AppLocalRuntimeFile Include="@(MicrosoftWindowsAppSDKFiles);@(MicrosoftWindowsAppSDKFilesRes)" />
+        </ItemGroup>
+        <WriteLinesToFile File="$(OutDir)WindowsAppSDK-files.txt"
+                          Lines="@(_AppLocalRuntimeFile->'%(RecursiveDir)%(Filename)%(Extension)')" Overwrite="true" Encoding="UTF-8" />
+        <Copy SourceFiles="$(PkgMicrosoft_WindowsAppSDK_Runtime)\NOTICE.txt"
+              DestinationFiles="$(OutDir)WindowsAppSDK-NOTICE.txt" SkipUnchangedFiles="true" />
     </Target>
 </Project>

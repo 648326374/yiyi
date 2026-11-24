@@ -6,7 +6,10 @@
 
 ## 下载与运行
 
-解压 `dist/Yiyi-0.11.3-winui-windows-x64.zip`，运行 `Yiyi-WinUI/Yiyi.WinUI.exe`。x64 ZIP 约 68 MiB，解压约 105 MiB，包含本地 OCR 模型、PDFium、qpdf 及两套 PDF 字体。启动需要共享的 Windows App Runtime 2.4 x64。 [Windows App Runtime 下载](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads/)
+- **精简包** `dist/Yiyi-0.11.3-winui-windows-x64.zip` 约 68 MiB。安装 Windows App Runtime 2.4 x64 后，解压并运行 `Yiyi-WinUI/Yiyi.WinUI.exe`。 [Windows App Runtime 下载](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads/)
+- **自带运行时包** `dist/Yiyi-0.11.3-winui-windows-x64-self-contained.zip` 约 89 MiB，随附 Windows App Runtime 2.4 x64。遇到 `0x80670016` 时，完整解压后运行 `Yiyi-WinUI-SelfContained/Yiyi.WinUI.exe`。
+
+两个包均包含本地 OCR 模型、PDFium、qpdf 及两套 PDF 字体。
 
 首次启动点击「偏好设置 → 添加 AI 服务」。支持 Ollama、LM Studio、OpenAI Chat Completions、OpenAI Responses、Anthropic 和 Gemini。本地服务需事先启动，云端服务使用自己的 API Key。
 
@@ -37,6 +40,12 @@ build/winui/Release/Yiyi.WinUI.exe --data-dir artifacts/pdf-test --no-desktop --
 ```
 
 `--no-desktop` 关闭托盘、快捷键和划词监测。TXT、DOCX 和 PPTX 可用 `--document` 打开。使用 `-SmokeTest` 会运行启动检查。
+
+构建自带运行时包时，添加 `-SelfContained`。该版本的 Release 输出位于 `build/winui-self-contained/Release/`。
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1 -SelfContained -SmokeTest -Package
+```
 
 准备依赖后运行回归测试。使用 Visual Studio 2022 时，将生成器改为 `Visual Studio 17 2022`。
 

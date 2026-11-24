@@ -3,7 +3,7 @@
 ## WinUI and Windows platform
 
 - C++/WinRT supplies the C++ projection for Windows Runtime APIs. The portable package includes its license as `CppWinRT-LICENSE.txt`. [C++/WinRT source and license](https://github.com/microsoft/cppwinrt)
-- WinUI 3 uses Windows App SDK with the shared Windows App Runtime 2.4 x64. The portable package contains the bootstrap DLL and `WindowsAppSDK-LICENSE.txt`. [Windows App SDK source and license](https://github.com/microsoft/WindowsAppSDK)
+- WinUI 3 uses Windows App SDK. The compact ZIP contains the bootstrap DLL for the shared Windows App Runtime 2.4 x64. The self-contained ZIP ships the runtime files and `WindowsAppSDK-NOTICE.txt`. Both include `WindowsAppSDK-LICENSE.txt`. [Windows App SDK source and license](https://github.com/microsoft/WindowsAppSDK)
 - SQLite storage uses the SQLite implementation supplied by Windows in `winsqlite3.dll`. [SQLite copyright](https://www.sqlite.org/copyright.html)
 
 The interface uses system fonts. PDF export bundles the open-source fonts described below.

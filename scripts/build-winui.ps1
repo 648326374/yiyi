@@ -3,7 +3,8 @@ param(
     [string]$Configuration = 'Release',
     [string]$PythonPath = '',
     [switch]$SmokeTest,
-    [switch]$Package
+    [switch]$Package,
+    [switch]$SelfContained
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,6 +24,7 @@ if (-not $msbuild) {
 $vsVersion = & $vswhere -latest -products '*' -requires Microsoft.Component.MSBuild Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationVersion
 $generator = if (([version]$vsVersion).Major -ge 18) { 'Visual Studio 18 2026' } else { 'Visual Studio 17 2022' }
 $buildRoot = Join-Path $repoRoot 'build\winui'
+$applicationRoot = if ($SelfContained) { Join-Path $repoRoot 'build\winui-self-contained' } else { $buildRoot }
 $pdfRuntime = Join-Path $repoRoot 'build\pdf'
 $pdfManifest = Join-Path $pdfRuntime 'pdf-dependencies.json'
 if (!(Test-Path -LiteralPath (Join-Path $pdfRuntime 'include\fpdfview.h')) -or
@@ -97,7 +99,8 @@ Build-WinUIWorker 'pdf' @("-DYIYI_PDF_RUNTIME=$pdfRuntime", "-DYIYI_QPDF_TOOL_DI
 Build-WinUIWorker 'ocr'
 
 $project = Join-Path $repoRoot 'winui\Yiyi.WinUI.vcxproj'
-& $msbuild $project /restore /m /v:minimal "/p:Configuration=$Configuration" /p:Platform=x64
+$appLocal = $SelfContained.IsPresent.ToString().ToLowerInvariant()
+& $msbuild $project /restore /m /v:minimal "/p:Configuration=$Configuration" /p:Platform=x64 "/p:WindowsAppSDKSelfContained=$appLocal"
 if ($LASTEXITCODE -ne 0) { throw 'Yiyi WinUI build failed.' }
 
 function Test-WinUIStartup([string]$Executable) {
@@ -132,7 +135,7 @@ function Test-WinUIStartup([string]$Executable) {
     Write-Output 'WinUI startup smoke test passed.'
 }
 
-$output = Join-Path $buildRoot $Configuration
+$output = Join-Path $applicationRoot $Configuration
 $binary = Join-Path $output 'Yiyi.WinUI.exe'
 Copy-Item -LiteralPath (Join-Path $buildRoot "pdf-worker\$Configuration\yiyi_pdf_worker.exe") -Destination $output -Force
 Copy-Item -LiteralPath (Join-Path $buildRoot "ocr-worker\$Configuration\yiyi_ocr_worker.exe") -Destination $output -Force
@@ -141,17 +144,34 @@ Copy-WinUIOcrRuntime $output
 Write-Output "WinUI application is ready at $binary"
 if ($Package) {
     $packageStage = Join-Path $buildRoot ('package-' + [Guid]::NewGuid().ToString('N'))
-    $packagePath = Join-Path $packageStage 'Yiyi-WinUI'
+    $folderName = if ($SelfContained) { 'Yiyi-WinUI-SelfContained' } else { 'Yiyi-WinUI' }
+    $packagePath = Join-Path $packageStage $folderName
     $distRoot = Join-Path $repoRoot 'dist'
     $version = (Get-Item -LiteralPath $binary).VersionInfo.FileVersion
-    $archiveName = "Yiyi-$version-winui-windows-x64.zip"
+    $archiveSuffix = if ($SelfContained) { '-self-contained' } else { '' }
+    $archiveName = "Yiyi-$version-winui-windows-x64$archiveSuffix.zip"
     $archive = Join-Path $distRoot $archiveName
     New-Item -ItemType Directory -Path $packagePath,$distRoot -Force | Out-Null
     try {
-        $payload = @('Yiyi.WinUI.exe', 'Yiyi.WinUI.pri', 'App.xbf', 'MainWindow.xbf', 'Microsoft.WindowsAppRuntime.Bootstrap.dll',
+        $payload = @('Yiyi.WinUI.exe', 'Yiyi.WinUI.pri', 'App.xbf', 'MainWindow.xbf',
             'CppWinRT-LICENSE.txt', 'WindowsAppSDK-LICENSE.txt', 'yiyi_pdf_worker.exe', 'yiyi_ocr_worker.exe')
-        foreach ($name in $payload) {
-            Copy-Item -LiteralPath (Join-Path $output $name) -Destination $packagePath
+        if ($SelfContained) {
+            $runtimeFiles = @(Get-Content -LiteralPath (Join-Path $output 'WindowsAppSDK-files.txt'))
+            if ($runtimeFiles -notcontains 'Microsoft.WindowsAppRuntime.dll') {
+                throw 'The self-contained build did not produce the Windows App Runtime payload.'
+            }
+            $payload += $runtimeFiles
+            $payload += @('Microsoft.Web.WebView2.Core.dll', 'WindowsAppSDK-NOTICE.txt')
+        } else {
+            $payload += 'Microsoft.WindowsAppRuntime.Bootstrap.dll'
+        }
+        foreach ($name in ($payload | Sort-Object -Unique)) {
+            $destination = Join-Path $packagePath $name
+            $parent = Split-Path -Parent $destination
+            if (!(Test-Path -LiteralPath $parent)) {
+                New-Item -ItemType Directory -Path $parent -Force | Out-Null
+            }
+            Copy-Item -LiteralPath (Join-Path $output $name) -Destination $destination
         }
         Copy-WinUIPdfRuntime $packagePath
         Copy-WinUIOcrRuntime $packagePath

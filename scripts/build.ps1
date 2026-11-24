@@ -3,7 +3,8 @@ param(
     [string]$Configuration = 'Release',
     [string]$PythonPath = '',
     [switch]$SmokeTest,
-    [switch]$Package
+    [switch]$Package,
+    [switch]$SelfContained
 )
 
 $ErrorActionPreference = 'Stop'
