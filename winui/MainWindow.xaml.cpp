@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Dictionary.h"
 #include "MainWindow.xaml.h"
+#include "../assets/resource.h"
 #if __has_include("MainWindow.g.cpp")
 #include "MainWindow.g.cpp"
 #endif
@@ -240,6 +241,7 @@ namespace winrt::Yiyi::WinUI::implementation
         : m_dataDirectory(dataDirectory.empty() ? ::yiyi::defaultDataDirectory() : std::move(dataDirectory))
     {
         InitializeComponent();
+        VersionLabel().Text(L"v" YIYI_VERSION_STRING);
         ExtendsContentIntoTitleBar(true);
         SetTitleBar(ShellDragRegion());
         const auto window = NativeWindowHandle();
@@ -293,14 +295,6 @@ namespace winrt::Yiyi::WinUI::implementation
         const auto page = unbox_value<hstring>(item.Tag());
         const bool library = page == L"history" || page == L"favorites";
         const bool settings = page == L"settings";
-        const bool showHeader = library || settings;
-        PageHeader().Visibility(showHeader ? Visibility::Visible : Visibility::Collapsed);
-        if (showHeader) {
-            PageTitle().Text(unbox_value<hstring>(item.Content()));
-            if (page == L"history") PageSubtitle().Text(L"每一次好奇，都有迹可循。");
-            else if (page == L"favorites") PageSubtitle().Text(L"把不期而遇的好词，变成熟悉的表达。");
-            else PageSubtitle().Text(L"用习惯的模型，按自己的方式理解世界。");
-        }
         const bool leavingLibrary = !library && LibraryPage().Visibility() == Visibility::Visible;
         const bool leavingSettings = !settings && SettingsPage().Visibility() == Visibility::Visible;
         TranslatePage().Visibility(page == L"translate" ? Visibility::Visible : Visibility::Collapsed);
@@ -706,7 +700,6 @@ namespace winrt::Yiyi::WinUI::implementation
             auto& store = history();
             const auto query = trimmed(LibrarySearch().Text());
             m_library = store.list(m_favoritesOnly, query);
-            LibraryRecordCount().Text(hstring(std::to_wstring(store.count(m_favoritesOnly)) + L" 条记录"));
             LibraryList().Items().Clear();
             int selected = -1;
             for (size_t i = 0; i < m_library.size(); ++i) {
@@ -725,11 +718,8 @@ namespace winrt::Yiyi::WinUI::implementation
             const bool empty = m_library.empty();
             LibraryList().Visibility(empty ? Visibility::Collapsed : Visibility::Visible);
             LibraryEmpty().Visibility(empty ? Visibility::Visible : Visibility::Collapsed);
-            LibraryEmptyTitle().Text(!query.empty() ? L"没有找到匹配的记录" : m_favoritesOnly
-                ? L"为喜欢的表达，留一个位置" : L"你的语言足迹，从这里开始");
-            LibraryEmptyDescription().Text(!query.empty() ? L"换一个关键词，或清空搜索条件再试试。" : m_favoritesOnly
-                ? L"查询后点击星标，便能把词条或译文收进生词本。\n积少成多，让每一次理解都留下来。"
-                : L"完成一次查词或翻译后，结果会自动保存。\n随时回来重读，无需再次请求 AI。");
+            LibraryEmptyTitle().Text(!query.empty() ? L"没有找到匹配的记录" : m_favoritesOnly ? L"暂无收藏" : L"暂无查询记录");
+            LibraryEmptyDescription().Visibility(query.empty() && m_favoritesOnly ? Visibility::Visible : Visibility::Collapsed);
             LibraryEmptyButtonLabel().Text(query.empty() ? L"去翻译工作台" : L"清空搜索");
             Automation::AutomationProperties::SetName(LibraryEmptyButton(), LibraryEmptyButtonLabel().Text());
             updateHistoryActions();

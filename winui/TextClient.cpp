@@ -1,4 +1,5 @@
 #include "TextClient.h"
+#include "../assets/resource.h"
 
 #include <winrt/Windows.Data.Json.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -673,7 +674,7 @@ IAsyncOperation<hstring> sendAsync(Provider provider, hstring system, hstring in
     HttpRequestMessage request(HttpMethod::Post(), endpoint(provider));
     const auto headers = request.Headers();
     headers.Append(L"Accept", L"text/event-stream, application/x-ndjson, application/json");
-    headers.Append(L"User-Agent", L"Yiyi/0.11.3");
+    headers.Append(L"User-Agent", L"Yiyi/" YIYI_VERSION_STRING);
     try {
         if (provider.protocol == L"anthropic") {
             headers.Append(L"x-api-key", provider.apiKey);

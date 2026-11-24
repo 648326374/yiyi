@@ -25,6 +25,7 @@ struct OfficeTaskSnapshot {
     std::optional<size_t> activeSegment;
     size_t completed{};
     uint64_t generation{};
+    uint64_t revision{};
     bool translating{};
     bool processing{};
     bool draftDirty{};
@@ -34,14 +35,22 @@ struct OfficeTaskSnapshot {
 class OfficeLayoutPreview {
 public:
     ~OfficeLayoutPreview();
-    std::filesystem::path const& path() const { return m_path; }
+    std::filesystem::path const& path() const { return m_translation.empty() ? m_original : m_translation; }
+    std::filesystem::path const& original() const { return m_original; }
+    std::filesystem::path const& translation() const { return m_translation; }
+    bool matches(OfficeTaskSnapshot const& state) const { return m_generation == state.generation && m_revision == state.revision; }
 
 private:
     friend class OfficeTask;
     explicit OfficeLayoutPreview(std::filesystem::path directory);
     std::filesystem::path m_directory;
-    std::filesystem::path m_path;
+    std::filesystem::path m_original;
+    std::filesystem::path m_translation;
+    uint64_t m_generation{};
+    uint64_t m_revision{};
 };
+
+std::filesystem::path installedWord();
 
 class OfficeTask : public std::enable_shared_from_this<OfficeTask> {
 public:
@@ -50,7 +59,7 @@ public:
     // These operations perform disk IO and may be called from a background apartment.
     void load(std::filesystem::path const& path);
     void exportTo(std::filesystem::path const& path);
-    std::shared_ptr<OfficeLayoutPreview const> renderPreview(std::filesystem::path const& renderer);
+    std::shared_ptr<OfficeLayoutPreview const> renderPreview(std::filesystem::path const& renderer, void* cancel = nullptr);
     std::vector<OfficeNotice> issues() const;
     OfficeTaskSnapshot snapshot() const;
     std::filesystem::path suggestedOutput() const;

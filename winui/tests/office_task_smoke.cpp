@@ -1,9 +1,13 @@
 #include "OfficeTask.h"
+#include <windows.h>
 
+#include <array>
 #include <chrono>
 #include <condition_variable>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
 
 namespace {
 
@@ -39,6 +43,35 @@ void cacheAndTranslation(std::filesystem::path const& directory, winrt::hstring 
     const yiyi::DocumentSettings settings{{L"legacy", L"Model", L"openai", base, L"office-test", L"synthetic-key", L""},
         L"日语", L"法语", L"学术"};
     rejected([&] { task->start(settings); }, "Started with an unsaved draft");
+
+    auto preview = task->renderPreview(renderer);
+    const auto previewDirectory = preview->path().parent_path();
+    check(std::filesystem::file_size(preview->original()) > 0 && std::filesystem::file_size(preview->translation()) > 0,
+        "Source and translated preview did not both exist");
+    const auto originalPreview = yiyi::OfficeDocumentNative::load(previewDirectory / L"original.docx");
+    const auto translatedPreview = yiyi::OfficeDocumentNative::load(previewDirectory / L"preview.docx");
+    check(originalPreview.segments()[0].source == L"A practical guide"
+        && translatedPreview.segments()[0].source == L"旧译文"
+        && translatedPreview.segments()[1].source == state.document->segments()[1].source,
+        "Preview did not use the original and committed translation separately");
+    check(preview->matches(task->snapshot()) && task->snapshot().draftText == L"本机校对"
+        && task->snapshot().draftDirty && task->snapshot().completed == 1, "Preview committed or discarded a draft");
+    preview.reset();
+    check(!std::filesystem::exists(previewDirectory), "Temporary Office preview was not removed");
+    const auto marker = renderer.parent_path() / L"hold-preview";
+    std::ofstream(marker).put('1');
+    winrt::handle cancellation{CreateEventW(nullptr, TRUE, FALSE, nullptr)};
+    winrt::check_bool(static_cast<bool>(cancellation));
+    bool cancelled{};
+    {
+        std::jthread stop([&] { std::this_thread::sleep_for(200ms); SetEvent(cancellation.get()); });
+        try { task->renderPreview(renderer, cancellation.get()); }
+        catch (winrt::hresult_canceled const&) { cancelled = true; }
+    }
+    std::filesystem::remove(marker);
+    check(cancelled && task->snapshot().draftDirty && task->snapshot().completed == 1,
+        "Cancelling the converter changed the document task");
+
     auto exported = task->suggestedOutput();
     task->exportTo(exported);
     state = task->snapshot();
@@ -47,12 +80,6 @@ void cacheAndTranslation(std::filesystem::path const& directory, winrt::hstring 
     check(exportedDoc.segments()[0].source == L"旧译文" && exportedDoc.segments()[1].source == L"本机校对", "Export did not include recovered edits");
     exported += L".issues.txt";
     check(std::filesystem::is_regular_file(exported), "Export omitted the issue list");
-    auto preview = task->renderPreview(renderer);
-    const auto previewDirectory = preview->path().parent_path();
-    check(preview->path().filename() == L"preview.pdf" && std::filesystem::file_size(preview->path()) > 0
-        && std::filesystem::is_regular_file(previewDirectory / L"preview.docx"), "Preview or isolated source was not created");
-    preview.reset();
-    check(!std::filesystem::exists(previewDirectory), "Temporary Office preview was not removed");
     rejected([&] { task->load(directory / "broken.docx"); }, "Opened a broken replacement");
     check(task->snapshot().completed == 2, "Broken replacement erased the current task");
 
@@ -95,6 +122,40 @@ void cacheAndTranslation(std::filesystem::path const& directory, winrt::hstring 
     task->start(settings).get();
     state = task->snapshot();
     check(state.completed > 0 && state.completed == state.document->segments().size(), "Long Office paragraph did not complete");
+
+    task->load(directory / L"paths.docx");
+    preview = task->renderPreview(renderer);
+    check(std::filesystem::file_size(preview->original()) > 0 && preview->translation().empty(),
+        "Untranslated document did not show a source-only preview");
+    task->start(settings).get();
+    state = task->snapshot();
+    check(!preview->matches(state), "New translations did not invalidate an earlier preview");
+    const std::array<std::wstring_view, 4> expectedPaths{
+        LR"(\\mock-host\Team Share\2026 report.docx)",
+        LR"(“\\mock-host\Team, East\报告”)",
+        LR"(\\mock-host\share\only-path)",
+        LR"(\\?\UNC\mock-host\share\report.log)"
+    };
+    winrt::hstring pathSegment;
+    for (const auto path : expectedPaths) {
+        bool found{};
+        for (const auto& segment : state.document->segments()) {
+            if (std::wstring_view(segment.source).find(path) == path.npos) continue;
+            const auto& saved = state.progress.at(segment.id).translation;
+            check(std::wstring_view(saved).find(path) != path.npos, "UNC path changed during automatic translation");
+            if (segment.source == winrt::hstring(path))
+                check(saved == segment.source, "Path-only paragraph changed");
+            pathSegment = segment.id;
+            found = true;
+            break;
+        }
+        check(found, "Expected UNC path not present in the fixture");
+    }
+    task->edit(pathSegment, L"手动修改了路径");
+    bool warned{};
+    for (const auto& issue : task->issues())
+        warned = warned || (issue.id == pathSegment && std::wstring_view(issue.message).find(L"共享盘路径") != std::wstring_view::npos);
+    check(warned, "A changed path in an existing translation did not get a review notice");
 }
 
 }

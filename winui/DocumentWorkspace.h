@@ -4,7 +4,10 @@
 
 #include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Microsoft.UI.Xaml.Controls.h>
+#include <winrt/Windows.Data.Json.h>
 #include <winrt/Windows.Storage.Streams.h>
+
+#include <array>
 
 namespace yiyi {
 
@@ -37,10 +40,24 @@ private:
         std::vector<Provider> providers;
     };
 
+    struct PreviewPane {
+        winrt::Microsoft::UI::Xaml::Controls::ScrollViewer viewer{nullptr};
+        winrt::Microsoft::UI::Xaml::Controls::Image image{nullptr};
+        winrt::Microsoft::UI::Xaml::Controls::TextBlock counter{nullptr};
+        winrt::Microsoft::UI::Xaml::Controls::TextBlock hint{nullptr};
+        winrt::Microsoft::UI::Xaml::Controls::Button previous{nullptr};
+        winrt::Microsoft::UI::Xaml::Controls::Button next{nullptr};
+        winrt::Windows::Data::Json::JsonObject document{nullptr};
+        winrt::Windows::Foundation::IAsyncInfo operation{nullptr};
+        uint64_t generation{};
+        int page{};
+    };
+
     explicit DocumentWorkspace(DocumentWorkspaceHost host);
     void build();
     void buildText();
     void buildOffice();
+    void buildPagePreview();
     winrt::Microsoft::UI::Xaml::Controls::Grid preferenceBar(Preferences& preferences,
         winrt::Microsoft::UI::Xaml::Controls::StackPanel const& providerPanel);
     void updatePreferences(Preferences& preferences, DocumentSettings const& settings);
@@ -67,6 +84,13 @@ private:
     winrt::fire_and_forget selectRenderer();
     winrt::fire_and_forget generateLayoutPreview();
     winrt::fire_and_forget openLayoutPreview();
+    winrt::fire_and_forget renderOfficePage(size_t side);
+    void showOfficePreview(bool wholePage);
+    void updateOfficePreviewControls(OfficeTaskSnapshot const& state);
+    void fitOfficePages();
+    void changeOfficePage(size_t side, int delta);
+    void cancelOfficePreview();
+    void clearOfficePreview();
     void copyText();
     void commitDraft();
     void editDraft();
@@ -120,7 +144,22 @@ private:
     winrt::Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_fitOptions{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_officeReset{nullptr};
     std::filesystem::path m_renderer;
+    std::filesystem::path m_word;
     std::shared_ptr<OfficeLayoutPreview const> m_preview;
+    std::shared_ptr<winrt::handle> m_previewCancel;
+    winrt::Windows::Foundation::IAsyncInfo m_previewInspection{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::Grid m_officeParagraphs{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::Grid m_officeLayout{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::Grid m_officeFooter{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::StackPanel m_officeViews{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::StackPanel m_officeActions{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::StackPanel m_layoutActions{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::Button m_wholePageView{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::Button m_paragraphView{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::Button m_refreshPreview{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::ComboBox m_previewZoom{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::TextBlock m_previewStatus{nullptr};
+    std::array<PreviewPane, 2> m_previewPanes;
     int m_segment{-1};
     bool m_updating{};
     bool m_updatingPreferences{};
@@ -128,6 +167,7 @@ private:
     bool m_fileOperation{};
     bool m_modelTask{};
     bool m_closed{};
+    bool m_wholePage{};
 };
 
 }

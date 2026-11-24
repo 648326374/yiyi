@@ -2,8 +2,8 @@
 
 IDI_YIYI ICON "app.ico"
 1 VERSIONINFO
-FILEVERSION 0,11,3,0
-PRODUCTVERSION 0,11,3,0
+FILEVERSION YIYI_VERSION_TUPLE
+PRODUCTVERSION YIYI_VERSION_TUPLE
 FILEOS 0x40004
 FILETYPE 0x1
 BEGIN
@@ -13,10 +13,10 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "Yiyi"
       VALUE "FileDescription", "Yiyi AI Dictionary"
-      VALUE "FileVersion", "0.11.3"
+      VALUE "FileVersion", YIYI_VERSION_STRING
       VALUE "InternalName", "Yiyi"
       VALUE "ProductName", "Yiyi"
-      VALUE "ProductVersion", "0.11.3"
+      VALUE "ProductVersion", YIYI_VERSION_STRING
     END
   END
   BLOCK "VarFileInfo"

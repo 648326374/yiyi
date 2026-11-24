@@ -97,6 +97,7 @@ function Copy-WinUIOcrRuntime([string]$Destination) {
 
 Build-WinUIWorker 'pdf' @("-DYIYI_PDF_RUNTIME=$pdfRuntime", "-DYIYI_QPDF_TOOL_DIR=$qpdfBin", '-DBUILD_TESTING=OFF')
 Build-WinUIWorker 'ocr'
+Build-WinUIWorker 'office'
 
 $project = Join-Path $repoRoot 'winui\Yiyi.WinUI.vcxproj'
 $appLocal = $SelfContained.IsPresent.ToString().ToLowerInvariant()
@@ -139,6 +140,7 @@ $output = Join-Path $applicationRoot $Configuration
 $binary = Join-Path $output 'Yiyi.WinUI.exe'
 Copy-Item -LiteralPath (Join-Path $buildRoot "pdf-worker\$Configuration\yiyi_pdf_worker.exe") -Destination $output -Force
 Copy-Item -LiteralPath (Join-Path $buildRoot "ocr-worker\$Configuration\yiyi_ocr_worker.exe") -Destination $output -Force
+Copy-Item -LiteralPath (Join-Path $buildRoot "office-worker\$Configuration\yiyi_word_preview.exe") -Destination $output -Force
 Copy-WinUIPdfRuntime $output
 Copy-WinUIOcrRuntime $output
 Write-Output "WinUI application is ready at $binary"
@@ -154,7 +156,7 @@ if ($Package) {
     New-Item -ItemType Directory -Path $packagePath,$distRoot -Force | Out-Null
     try {
         $payload = @('Yiyi.WinUI.exe', 'Yiyi.WinUI.pri', 'App.xbf', 'MainWindow.xbf',
-            'CppWinRT-LICENSE.txt', 'WindowsAppSDK-LICENSE.txt', 'yiyi_pdf_worker.exe', 'yiyi_ocr_worker.exe')
+            'CppWinRT-LICENSE.txt', 'WindowsAppSDK-LICENSE.txt', 'yiyi_pdf_worker.exe', 'yiyi_ocr_worker.exe', 'yiyi_word_preview.exe')
         if ($SelfContained) {
             $runtimeFiles = @(Get-Content -LiteralPath (Join-Path $output 'WindowsAppSDK-files.txt'))
             if ($runtimeFiles -notcontains 'Microsoft.WindowsAppRuntime.dll') {

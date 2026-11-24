@@ -304,9 +304,9 @@ namespace winrt::Yiyi::WinUI::implementation
         }
         PdfTranslatedLabel().Content(box_value(hstring(L"译文 · " + pageStatus)));
         if (!m_pdfExport && !m_pdfCrop) {
-            const std::wstring activity = !state.operation.empty() ? std::wstring(state.operation)
-                : !loaded ? L"打开 PDF，保留原版式翻译" : L"第 " + std::to_wstring(m_pdfPage + 1) + L" / " +
-                    std::to_wstring(state.pageCount) + L" 页 · " + pageStatus;
+            std::wstring activity(state.operation);
+            if (activity.empty() && loaded)
+                activity = L"第 " + std::to_wstring(m_pdfPage + 1) + L" / " + std::to_wstring(state.pageCount) + L" 页 · " + pageStatus;
             PdfActivityStatus().Text(hstring(activity));
             PdfProgress().Visibility(state.busy ? Visibility::Visible : Visibility::Collapsed);
             PdfProgress().IsIndeterminate(state.busy && !analyzing && !resetPending && state.totalBlocks == 0);

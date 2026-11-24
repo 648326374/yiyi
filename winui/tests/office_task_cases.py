@@ -8,6 +8,31 @@ import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from xml.etree import ElementTree
+from zipfile import ZipFile
+
+
+def write_paths_fixture(source, destination):
+    w = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    with ZipFile(source) as template, ZipFile(destination, "w") as output:
+        body = ElementTree.fromstring(template.read("word/document.xml"))
+        content = body.find(w + "body")
+        for child in list(content):
+            if child.tag != w + "sectPr":
+                content.remove(child)
+        for index, text in enumerate([
+            r"Use this path: \\mock-host\Team Share\2026 report.docx",
+            r"Open “\\mock-host\Team, East\报告” then close the folder.",
+            r"\\mock-host\share\only-path",
+            r"The report is at \\?\UNC\mock-host\share\report.log；then read the notes.",
+        ]):
+            paragraph = ElementTree.Element(w + "p")
+            ElementTree.SubElement(ElementTree.SubElement(paragraph, w + "r"), w + "t").text = text
+            content.insert(index, paragraph)
+        for entry in template.infolist():
+            data = (ElementTree.tostring(body, encoding="utf-8") if entry.filename == "word/document.xml"
+                    else template.read(entry))
+            output.writestr(entry, data)
 
 
 def run(executable, fixtures, renderer_source):
@@ -49,6 +74,7 @@ def run(executable, fixtures, renderer_source):
             directory = Path(temporary)
             for filename in ("sample.docx", "long.docx"):
                 shutil.copyfile(fixtures / filename, directory / filename)
+            write_paths_fixture(directory / "sample.docx", directory / "paths.docx")
             (directory / "broken.docx").write_bytes(b"broken")
             tasks = directory / "profile" / "office-tasks"
             tasks.mkdir(parents=True)
@@ -71,6 +97,7 @@ def run(executable, fixtures, renderer_source):
             preview_base.mkdir()
             env = dict(os.environ, TEMP=str(preview_base), TMP=str(preview_base))
             subprocess.run([executable, str(directory), base, str(renderer)], check=True, timeout=25, env=env)
+            assert not list(preview_base.iterdir())
             for task in tasks.glob("*.json"):
                 assert "synthetic-key" not in task.read_text(encoding="utf-8")
         assert len(received) >= 5
@@ -78,6 +105,7 @@ def run(executable, fixtures, renderer_source):
         assert all(path == "/v1/chat/completions" and key == "Bearer synthetic-key" for path, _, key in received)
         assert all("英语 to 简体中文 in a 自然 style" in messages[0]["content"] for _, messages, _ in received[:2])
         assert all(len(messages[1]["content"].encode("utf-16-le")) // 2 <= 1000 for _, messages, _ in received)
+        assert all("mock-host" not in messages[1]["content"] for _, messages, _ in received)
     finally:
         release.set()
         server.shutdown()

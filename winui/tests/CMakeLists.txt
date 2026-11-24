@@ -58,4 +58,7 @@ if(YIYI_WORKBENCH_EXE)
     add_test(NAME workbench-smoke COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/workbench_smoke.py"
         "${YIYI_WORKBENCH_EXE}")
     set_tests_properties(workbench-smoke PROPERTIES RUN_SERIAL TRUE TIMEOUT 120)
+    add_test(NAME office-preview-ui-smoke COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/office_preview_ui_smoke.py"
+        "${YIYI_WORKBENCH_EXE}" "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/fixtures/office/sample.docx")
+    set_tests_properties(office-preview-ui-smoke PROPERTIES RUN_SERIAL TRUE SKIP_RETURN_CODE 77 TIMEOUT 100)
 endif()

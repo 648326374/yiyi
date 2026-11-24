@@ -24,8 +24,8 @@ TRANSLATION = "书店九点开门。"
 CANCELED_INPUT = "The service will wait for me to cancel."
 
 
-def wait(label, probe):
-    deadline = time.monotonic() + 8
+def wait(label, probe, timeout=8):
+    deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if value := probe():
             return value
@@ -65,7 +65,7 @@ def paste_fixture():
 
 
 @contextmanager
-def fake_provider():
+def fake_provider(reply=None):
     requests = []
     release_cancelled = Event()
 
@@ -84,7 +84,7 @@ def fake_provider():
                 release_cancelled.wait(15)
                 self.close_connection = True
                 return
-            result = "POS: n.\nTRANSLATION: 花园" if dictionary else TRANSLATION
+            result = reply(source) if reply else "POS: n.\nTRANSLATION: 花园" if dictionary else TRANSLATION
             packet = {"choices": [{"delta": {"content": result}, "finish_reason": "stop"}]}
             body = f"data: {json.dumps(packet)}\r\n\r\ndata: [DONE]\r\n\r\n".encode()
             self.send_response(200)
@@ -105,13 +105,13 @@ def fake_provider():
 
 
 @contextmanager
-def workbench(executable, settings):
+def workbench(executable, settings, *arguments):
     with TemporaryDirectory(prefix="yiyi-workbench-") as directory:
         profile = Path(directory)
         (profile / "settings.json").write_text(json.dumps(settings), encoding="utf-8")
         system = Path(os.environ["SystemRoot"])
         env = dict(os.environ, PATH=f"{system / 'System32'};{system}")
-        app = subprocess.Popen([executable, "--data-dir", profile, "--no-desktop"],
+        app = subprocess.Popen([executable, "--data-dir", profile, "--no-desktop", *arguments],
                                cwd=system, env=env, creationflags=subprocess.CREATE_NO_WINDOW)
         window = None
         try:
@@ -177,6 +177,18 @@ def focus_editor(source):
     wait("source editor keyboard focus", lambda: source.element_info.element.CurrentHasKeyboardFocus)
 
 
+def check_page_content(root, nav_item, first_control):
+    dpi = ctypes.windll.user32.GetDpiForWindow(root.handle)
+    offset = (first_control.rectangle().top - root.rectangle().top) * 96 / dpi
+    assert 36 <= offset < 72, (first_control.window_text(), offset)
+    redundant = {"翻译工作台", "查询历史", "生词本", "偏好设置", "文档翻译", "Word / PPT 翻译", "PDF 翻译",
+                 "每一次好奇，都有迹可循。", "把不期而遇的好词，变成熟悉的表达。", "用习惯的模型，按自己的方式理解世界。"}
+    pane_edge = nav_item.rectangle().right
+    labels = {item.window_text() for item in root.descendants(control_type="Text")
+              if item.is_visible() and item.rectangle().left > pane_edge}
+    assert not (redundant & labels), redundant & labels
+
+
 def verify(executable, screenshots):
     with fake_provider() as (requests, url), paste_fixture() as put:
         settings = {"selectedProviderId": "demo", "providers": [
@@ -199,7 +211,7 @@ def verify(executable, screenshots):
             assert source.rectangle().bottom < result.rectangle().top
             visible = [item for item in root.descendants() if item.is_visible()]
             assert not {"智能翻译", "文本翻译", "词典", "管理 AI 服务"}.intersection(item.window_text() for item in visible)
-            assert not {"PageTitle", "ActiveProvider"}.intersection(item.element_info.automation_id for item in visible)
+            assert not any(item.element_info.automation_id == "ActiveProvider" for item in visible)
             language = ui("SourceLanguage").rectangle()
             capture = ui("ScreenshotButton").rectangle()
             assert language.top <= capture.mid_point().y <= language.bottom
@@ -263,7 +275,11 @@ def verify(executable, screenshots):
                 assert db.execute("SELECT input, kind, model FROM records ORDER BY id").fetchall() == expected[:-1]
 
             ui("HistoryItem").iface_selection_item.Select()
-            assert ui("PageTitle").window_text() == "查询历史"
+            search = ui("LibrarySearch")
+            check_page_content(root, ui("HistoryItem"), search)
+            search.iface_value.SetValue("no matching source")
+            wait("empty search results", lambda: ui("LibraryEmptyTitle").window_text() == "没有找到匹配的记录")
+            search.iface_value.SetValue("")
             ui("LibraryList").descendants(control_type="ListItem")[0].iface_invoke.Invoke()
             wait("reopened history", lambda: ui("SourceText").iface_value.CurrentValue == "The bookshop opens at nine.")
             assert requests == expected
@@ -278,6 +294,30 @@ def verify(executable, screenshots):
             submitted(ui, "The bookshop opens at nine.", model="demo-alt")
             assert ui("WorkbenchResultProvider").window_text() == "备用演示 · demo-alt"
             print("Provider switching in settings applies to the next request and preserves earlier result attribution.")
+
+            if screenshots is not None:
+                ui("HistoryItem").iface_selection_item.Select()
+                focus_editor(ui("LibrarySearch"))
+                screenshot(root, screenshots, "history-light")
+
+            ui("FavoritesItem").iface_selection_item.Select()
+            check_page_content(root, ui("FavoritesItem"), ui("LibrarySearch"))
+            assert ui("LibraryEmptyTitle").window_text() == "暂无收藏"
+
+            ui("DocumentsItem").iface_selection_item.Select()
+            formats = wait("document tabs", lambda: root.descendants(title="文档格式", control_type="List"))[0]
+            check_page_content(root, ui("DocumentsItem"), formats)
+            assert root.descendants(title="导入 TXT", control_type="Button")[0].is_enabled()
+            formats.descendants(title="Word / PPT", control_type="ListItem")[0].iface_selection_item.Select()
+            assert root.descendants(title="打开文档", control_type="Button")[0].is_enabled()
+            check_page_content(root, ui("DocumentsItem"), formats)
+
+            ui("PdfItem").iface_selection_item.Select()
+            check_page_content(root, ui("PdfItem"), ui("PdfOpenButton"))
+            ui("SettingsItem").iface_selection_item.Select()
+            check_page_content(root, ui("SettingsItem"), ui("AddProviderButton"))
+            assert requests == expected
+            print("Library, document, PDF and settings pages open directly to their controls.")
 
         with workbench(executable, dict(settings, theme="dark", mode="translation")) as (profile, root, ui, keys):
             dpi = ctypes.windll.user32.GetDpiForWindow(root.handle)
@@ -325,7 +365,7 @@ def verify(executable, screenshots):
         with workbench(executable, {"theme": "light"}) as (profile, root, ui, keys):
             put("The original stays while setting up a service.")
             ui("PasteButton").iface_invoke.Invoke()
-            wait("provider settings", lambda: ui("PageTitle").window_text() == "偏好设置")
+            wait("provider settings", lambda: ui("AddProviderButton").is_visible())
             ui("TranslateItem").iface_selection_item.Select()
             assert ui("SourceText").iface_value.CurrentValue == "The original stays while setting up a service."
             assert requests == expected and not (profile / "history.sqlite").exists()

@@ -116,29 +116,16 @@
                             AutomationProperties.Name="跟随系统" ToolTipService.ToolTip="跟随系统">
                         <FontIcon Glyph="&#xE7F4;" FontSize="14" />
                     </Button>
-                    <TextBlock Grid.Column="3" Text="v0.11.3" Style="{StaticResource YiyiCaption}" FontFamily="Segoe UI"
+                    <TextBlock x:Name="VersionLabel" Grid.Column="3" Style="{StaticResource YiyiCaption}" FontFamily="Segoe UI"
                                FontSize="9" HorizontalAlignment="Right" VerticalAlignment="Center" />
                 </Grid>
             </NavigationView.PaneFooter>
             <Grid Padding="20,44,20,0" RowSpacing="16">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Grid x:Name="PageHeader" ColumnSpacing="12" Visibility="Collapsed">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Spacing="4" VerticalAlignment="Center">
-                        <TextBlock x:Name="PageTitle" Style="{StaticResource YiyiTitle}" />
-                        <TextBlock x:Name="PageSubtitle" Style="{StaticResource YiyiBodyLabel}" />
-                    </StackPanel>
-                    <TextBlock x:Name="LibraryRecordCount" Grid.Column="1" Text="0 条记录" VerticalAlignment="Center"
-                               Style="{StaticResource YiyiBodyLabel}" Visibility="{Binding Visibility, ElementName=LibraryPage}" />
-                </Grid>
-                <Grid x:Name="TranslatePage" Grid.RowSpan="2" RowSpacing="10" Margin="0,0,0,2">
+                <Grid x:Name="TranslatePage" RowSpacing="10" Margin="0,0,0,2">
                     <Grid.Resources>
                         <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
                         <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
@@ -306,7 +293,7 @@
                         </Grid>
                     </Border>
                 </Grid>
-                <Grid x:Name="LibraryPage" Grid.Row="1" RowSpacing="17" Margin="0,0,0,4" Visibility="Collapsed">
+                <Grid x:Name="LibraryPage" Margin="0,0,0,4" Visibility="Collapsed">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="44" />
                         <RowDefinition Height="*" />
@@ -336,7 +323,7 @@
                             </StackPanel>
                         </Button>
                     </Grid>
-                    <Grid Grid.Row="1">
+                    <Grid Grid.Row="1" Margin="0,17,0,0">
                         <ListView x:Name="LibraryList" AutomationProperties.Name="翻译记录"
                                   SelectionChanged="LibrarySelectionChanged" Visibility="Collapsed"
                                   IsItemClickEnabled="True" ItemClick="OpenLibraryItem">
@@ -388,11 +375,10 @@
                             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14" MaxWidth="420">
                                 <ContentControl Template="{StaticResource YiyiEmptyIllustration}" Width="170" Height="134"
                                                 HorizontalAlignment="Center" />
-                                <TextBlock x:Name="LibraryEmptyTitle" Text="你的语言足迹，从这里开始" Style="{StaticResource YiyiTitle}"
+                                <TextBlock x:Name="LibraryEmptyTitle" Style="{StaticResource YiyiTitle}"
                                            FontWeight="Normal" FontSize="18" TextWrapping="Wrap" TextAlignment="Center" />
                                 <TextBlock x:Name="LibraryEmptyDescription" Style="{StaticResource YiyiBodyLabel}" TextAlignment="Center"
-                                           TextWrapping="Wrap" LineHeight="25" LineStackingStrategy="BlockLineHeight"
-                                           Text="完成一次查词或翻译后，结果会自动保存。&#10;随时回来重读，无需再次请求 AI。" />
+                                           TextWrapping="Wrap" Visibility="Collapsed" Text="点击结果旁的星标即可收藏。" />
                                 <Button x:Name="LibraryEmptyButton" Style="{StaticResource YiyiSoftButton}" AutomationProperties.Name="去翻译工作台"
                                         HorizontalAlignment="Center" Margin="0,6,0,0" Click="NewLibraryQuery">
                                     <StackPanel Orientation="Horizontal" Spacing="7">
@@ -403,19 +389,13 @@
                             </StackPanel>
                         </Border>
                     </Grid>
-                    <StackPanel Grid.Row="2" Spacing="8">
-                        <StackPanel x:Name="LibraryActions" Orientation="Horizontal" Spacing="8" Visibility="Collapsed">
-                            <Button x:Name="LibraryOpen" Content="打开记录" Style="{StaticResource YiyiSoftButton}" Click="OpenHistorySelection" IsEnabled="False" />
-                            <Button x:Name="LibraryFavorite" Content="收藏" Style="{StaticResource YiyiButton}" Click="ToggleHistoryFavorite" IsEnabled="False" />
-                            <Button x:Name="LibraryDelete" Content="删除" Style="{StaticResource YiyiButton}" Click="DeleteHistory" IsEnabled="False" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="5">
-                            <FontIcon Glyph="&#xE72E;" FontSize="11" Foreground="{ThemeResource YiyiMutedBrush}" />
-                            <TextBlock Text="保存在本机 · 点击记录可重新打开完整结果" Style="{StaticResource YiyiCaption}" />
-                        </StackPanel>
+                    <StackPanel x:Name="LibraryActions" Grid.Row="2" Margin="0,10,0,0" Orientation="Horizontal" Spacing="8" Visibility="Collapsed">
+                        <Button x:Name="LibraryOpen" Content="打开记录" Style="{StaticResource YiyiSoftButton}" Click="OpenHistorySelection" IsEnabled="False" />
+                        <Button x:Name="LibraryFavorite" Content="收藏" Style="{StaticResource YiyiButton}" Click="ToggleHistoryFavorite" IsEnabled="False" />
+                        <Button x:Name="LibraryDelete" Content="删除" Style="{StaticResource YiyiButton}" Click="DeleteHistory" IsEnabled="False" />
                     </StackPanel>
                 </Grid>
-                <ScrollViewer x:Name="SettingsPage" Grid.Row="1" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
+                <ScrollViewer x:Name="SettingsPage" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
                     <StackPanel Spacing="14" Padding="0,0,12,14">
                         <Border Style="{StaticResource YiyiCard}" Padding="18">
                             <StackPanel Spacing="13">
@@ -536,9 +516,9 @@
                         </Border>
                     </StackPanel>
                 </ScrollViewer>
-                <ContentControl x:Name="DocumentsHost" Grid.Row="1" HorizontalContentAlignment="Stretch"
+                <ContentControl x:Name="DocumentsHost" HorizontalContentAlignment="Stretch"
                                 VerticalContentAlignment="Stretch" Visibility="Collapsed" />
-                <Grid x:Name="PdfPage" Grid.Row="1" RowSpacing="8" Visibility="Collapsed">
+                <Grid x:Name="PdfPage" RowSpacing="8" Visibility="Collapsed">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -556,7 +536,7 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="PdfFileName" Text="PDF 翻译" FontSize="16" FontWeight="SemiBold"
+                        <TextBlock x:Name="PdfFileName" FontSize="16" FontWeight="SemiBold"
                                    FontFamily="Microsoft YaHei UI" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                         <TextBlock x:Name="PdfModel" Grid.Column="1" Text="模型 · 未选择" FontSize="11"
                                    Foreground="{ThemeResource YiyiSecondaryBrush}" VerticalAlignment="Center"
@@ -687,13 +667,13 @@
                     <ProgressBar x:Name="PdfProgress" Grid.Row="4" Visibility="Collapsed" Minimum="0" Maximum="1" />
                     <Grid Grid.Row="5" ColumnSpacing="8">
                         <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                        <TextBlock x:Name="PdfActivityStatus" Text="打开 PDF，保留原版式翻译" TextWrapping="Wrap" FontSize="11"
+                        <TextBlock x:Name="PdfActivityStatus" TextWrapping="Wrap" FontSize="11"
                                    VerticalAlignment="Center" Foreground="{ThemeResource YiyiSecondaryBrush}" AutomationProperties.LiveSetting="Polite" />
                         <Button x:Name="PdfIssues" Grid.Column="1" Content="待校对" Click="OpenPdfIssues"
                                 Style="{StaticResource YiyiGhostButton}" IsEnabled="False" />
                     </Grid>
                 </Grid>
-                <InfoBar x:Name="Status" Grid.Row="2" IsClosable="True" />
+                <InfoBar x:Name="Status" Grid.Row="1" IsClosable="True" />
             </Grid>
         </NavigationView>
         <Grid x:Name="ShellDragRegion" Height="36" VerticalAlignment="Top" Background="Transparent"

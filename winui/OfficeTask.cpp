@@ -8,6 +8,8 @@
 #include <wininet.h>
 #include <shlwapi.h>
 
+#include "NativePaths.h"
+
 #include <winrt/Windows.Data.Json.h>
 #include <winrt/Windows.Foundation.Collections.h>
 
@@ -15,6 +17,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <iterator>
 #include <utility>
 
 #pragma comment(lib, "shlwapi.lib")
@@ -90,6 +93,67 @@ OfficeTranslations translations(std::map<hstring, OfficeProgress> const& progres
     return result;
 }
 
+std::vector<std::pair<size_t, size_t>> uncPaths(std::wstring_view text)
+{
+    constexpr std::wstring_view hostEnd = L"\\ \t\r\n\f\v<>:\"/|?*，。；！？、";
+    constexpr std::wstring_view pathEnd = L"\t\r\n\f\v<>:\"/|?*，。；！？、,;!";
+    constexpr std::wstring_view openQuotes = L"\"'“‘「『";
+    constexpr std::wstring_view closeQuotes = L"\"'”’」』";
+    std::vector<std::pair<size_t, size_t>> ranges;
+    for (size_t offset = 0;;) {
+        const auto slash = text.find(L"\\\\", offset);
+        if (slash == text.npos) break;
+        offset = slash + 2;
+        auto host = offset;
+        if (text.substr(host, 6) == L"?\\UNC\\" || text.substr(host, 6) == L"?\\unc\\") host += 6;
+        const auto separator = text.find_first_of(hostEnd, host);
+        if (separator == text.npos || separator == host || text[separator] != L'\\' ||
+            text.substr(host, separator - host) == L".") continue;
+        const auto share = separator + 1;
+        if (share == text.size() || text[share] == L'\\' || whitespace.find(text[share]) != whitespace.npos) continue;
+        const auto quote = slash ? openQuotes.find(text[slash - 1]) : text.npos;
+        if (quote != text.npos) {
+            const auto closing = text.find(closeQuotes[quote], share);
+            if (closing != text.npos && closing > share && closing < text.find_first_of(L"\r\n", share)) {
+                offset = closing + 1;
+                ranges.emplace_back(slash - 1, offset);
+                continue;
+            }
+        }
+        auto end = std::min({text.size(), text.find_first_of(pathEnd, share), text.find(L"\\\\", share)});
+        while (end > share && (whitespace.find(text[end - 1]) != whitespace.npos || text[end - 1] == L'.'))
+            --end;
+        if (end <= share) continue;
+        offset = end;
+        ranges.emplace_back(slash, end);
+    }
+    return ranges;
+}
+
+std::vector<DocumentPart> splitOfficeText(std::wstring_view text)
+{
+    const auto paths = uncPaths(text);
+    if (paths.empty()) return splitDocumentText(text);
+    std::vector<DocumentPart> result;
+    const auto append = [&](std::wstring_view fragment) {
+        if (fragment.empty()) return;
+        if (fragment.find_first_not_of(L" \t\r\n\f\v\u00a0\u3000:：,;.!?，。；！？、()（）[]【】\"'“”‘’") == fragment.npos) {
+            result.push_back({hstring(fragment), false});
+            return;
+        }
+        auto parts = splitDocumentText(fragment);
+        result.insert(result.end(), std::make_move_iterator(parts.begin()), std::make_move_iterator(parts.end()));
+    };
+    size_t previous{};
+    for (const auto& [begin, end] : paths) {
+        append(text.substr(previous, begin - previous));
+        result.push_back({hstring(text.substr(begin, end - begin)), false});
+        previous = end;
+    }
+    append(text.substr(previous));
+    return result;
+}
+
 std::vector<OfficeNotice> review(OfficeDocumentNative const& doc, std::map<hstring, OfficeProgress> const& progress,
                                  OfficeTranslations const& text, OfficeExportOptions options)
 {
@@ -98,6 +162,14 @@ std::vector<OfficeNotice> review(OfficeDocumentNative const& doc, std::map<hstri
         const auto status = progress.find(item.id);
         if (status != progress.end() && !status->second.failure.empty())
             result.push_back({item.id, item.location, status->second.failure});
+        if (const auto translated = text.find(item.id); translated != text.end()) {
+            const std::wstring_view source(item.source);
+            const auto paths = uncPaths(source);
+            if (std::ranges::any_of(paths, [&](auto const& path) {
+                return std::wstring_view(translated->second).find(source.substr(path.first, path.second - path.first)) == source.npos;
+            }))
+                result.push_back({item.id, item.location, L"译文中的共享盘路径可能有改动，请核对或重译此段。"});
+        }
     }
     return result;
 }
@@ -111,59 +183,115 @@ std::wstring fileUrl(std::filesystem::path const& path)
     return std::wstring(output.data(), length);
 }
 
-void runRenderer(std::filesystem::path const& executable, std::filesystem::path const& directory,
-                 std::filesystem::path const& input)
+void checkCancellation(HANDLE cancel)
 {
-    if (!std::filesystem::is_regular_file(executable) ||
-        CompareStringOrdinal(executable.filename().c_str(), -1, L"soffice.exe", -1, TRUE) != CSTR_EQUAL)
-        fail(L"请选择已安装 LibreOffice 的 soffice.exe。");
-    auto command = L"\"" + executable.native() + L"\" \"-env:UserInstallation=" + fileUrl(directory / L"profile")
-        + L"\" --headless --convert-to pdf --outdir \"" + directory.native() + L"\" \"" + input.native() + L"\"";
+    if (cancel && WaitForSingleObject(cancel, 0) == WAIT_OBJECT_0) throw hresult_canceled();
+}
+
+void runPreviewProcess(std::filesystem::path const& executable, std::wstring command, HANDLE cancel,
+                       hstring const& failure)
+{
+    checkCancellation(cancel);
     winrt::handle job{CreateJobObjectW(nullptr, nullptr)};
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
     limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
     if (!job || !SetInformationJobObject(job.get(), JobObjectExtendedLimitInformation, &limits, sizeof(limits)))
-        fail(L"无法准备 LibreOffice 预览进程。");
+        fail(L"无法准备文档预览进程。");
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
     PROCESS_INFORMATION process{};
+    const auto working = executable.parent_path();
     if (!CreateProcessW(executable.c_str(), command.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW | CREATE_SUSPENDED,
-                        nullptr, directory.c_str(), &startup, &process))
-        fail(L"无法启动 LibreOffice，请检查设置的程序路径。");
+                        nullptr, working.c_str(), &startup, &process))
+        fail(failure);
     winrt::handle launcher{process.hProcess};
     winrt::handle thread{process.hThread};
     if (!AssignProcessToJobObject(job.get(), launcher.get())) {
         TerminateProcess(launcher.get(), 1);
-        fail(L"无法隔离 LibreOffice 预览进程。");
+        fail(L"无法隔离文档预览进程。");
     }
-    if (ResumeThread(thread.get()) == static_cast<DWORD>(-1)) fail(L"无法启动 LibreOffice 预览进程。");
+    if (ResumeThread(thread.get()) == static_cast<DWORD>(-1)) fail(failure);
     const auto started = GetTickCount64();
-    const auto waited = WaitForSingleObject(launcher.get(), 120000);
-    if (waited == WAIT_TIMEOUT) fail(L"版式预览生成超时。");
-    DWORD code{};
-    if (waited != WAIT_OBJECT_0 || !GetExitCodeProcess(launcher.get(), &code) || code != 0)
-        fail(L"未能生成版式预览，请确认 LibreOffice 能打开此文档。");
-    for (;;) {
-        JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting{};
-        if (!QueryInformationJobObject(job.get(), JobObjectBasicAccountingInformation, &accounting, sizeof(accounting), nullptr))
-            fail(L"无法检查 LibreOffice 预览进程。");
-        if (accounting.ActiveProcesses == 0) break;
-        if (GetTickCount64() - started >= 120000) fail(L"版式预览生成超时。");
-        Sleep(50);
+    try {
+        for (;;) {
+            checkCancellation(cancel);
+            JOBOBJECT_BASIC_ACCOUNTING_INFORMATION accounting{};
+            if (!QueryInformationJobObject(job.get(), JobObjectBasicAccountingInformation, &accounting, sizeof(accounting), nullptr))
+                fail(L"无法检查文档预览进程。");
+            if (accounting.ActiveProcesses == 0) break;
+            DWORD code{};
+            if (!GetExitCodeProcess(launcher.get(), &code) || (code != STILL_ACTIVE && code != 0)) fail(failure);
+            if (GetTickCount64() - started >= 120000) fail(L"整页预览生成超时。");
+            if (cancel) WaitForSingleObject(cancel, 50);
+            else Sleep(50);
+        }
+        DWORD code{};
+        if (!GetExitCodeProcess(launcher.get(), &code) || code != 0) fail(failure);
+    } catch (...) {
+        TerminateJobObject(job.get(), 1);
+        // Let the terminated converter release the temporary Office and PDF files.
+        const auto deadline = GetTickCount64() + 3000;
+        JOBOBJECT_BASIC_ACCOUNTING_INFORMATION jobState{};
+        while (QueryInformationJobObject(job.get(), JobObjectBasicAccountingInformation, &jobState, sizeof(jobState), nullptr) &&
+               jobState.ActiveProcesses && GetTickCount64() < deadline)
+            Sleep(25);
+        throw;
     }
 }
 
+bool namedExecutable(std::filesystem::path const& executable, wchar_t const* name)
+{
+    return CompareStringOrdinal(executable.filename().c_str(), -1, name, -1, TRUE) == CSTR_EQUAL;
+}
+
+void runRenderer(std::filesystem::path const& renderer, std::filesystem::path const& directory,
+                 std::vector<std::filesystem::path> const& inputs, HANDLE cancel)
+{
+    if (namedExecutable(renderer, L"WINWORD.EXE")) {
+        const auto worker = executableDirectory() / L"yiyi_word_preview.exe";
+        auto command = L"\"" + worker.native() + L"\" \"" + renderer.native() + L"\" \"" + directory.native() + L"\"";
+        runPreviewProcess(worker, std::move(command), cancel, L"Word 未能生成整页预览，请确认本机 Word 可以打开这份文档。");
+        return;
+    }
+    if (!std::filesystem::is_regular_file(renderer) || !namedExecutable(renderer, L"soffice.exe"))
+        fail(L"请选择已安装 LibreOffice 的 soffice.exe。");
+    auto command = L"\"" + renderer.native() + L"\" \"-env:UserInstallation=" + fileUrl(directory / L"profile")
+        + L"\" --headless --convert-to pdf --outdir \"" + directory.native() + L"\"";
+    for (const auto& input : inputs)
+        command += L" \"" + input.native() + L"\"";
+    runPreviewProcess(renderer, std::move(command), cancel, L"LibreOffice 未能生成整页预览，请确认它可以打开这份文档。");
+}
+
+}
+
+std::filesystem::path installedWord()
+{
+    constexpr wchar_t key[] = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\WINWORD.EXE";
+    for (const auto root : {HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE}) {
+        for (const DWORD scope : {RRF_SUBKEY_WOW6464KEY, RRF_SUBKEY_WOW6432KEY}) {
+            wchar_t filename[1024]{};
+            DWORD size = sizeof(filename);
+            if (RegGetValueW(root, key, nullptr, RRF_RT_REG_SZ | RRF_RT_REG_EXPAND_SZ | scope, nullptr, filename, &size) != ERROR_SUCCESS)
+                continue;
+            const std::filesystem::path path(filename);
+            std::error_code error;
+            if (path.is_absolute() && namedExecutable(path, L"WINWORD.EXE") && std::filesystem::is_regular_file(path, error))
+                return path;
+        }
+    }
+    return {};
 }
 
 OfficeLayoutPreview::OfficeLayoutPreview(std::filesystem::path directory)
-    : m_directory(std::move(directory)), m_path(m_directory / L"preview.pdf")
+    : m_directory(std::move(directory))
 {
 }
 
 OfficeLayoutPreview::~OfficeLayoutPreview()
 {
     std::error_code error;
-    std::filesystem::remove_all(m_directory, error);
+    const auto resolved = std::filesystem::canonical(m_directory, error);
+    if (!error && resolved == m_directory) std::filesystem::remove_all(resolved, error);
 }
 
 OfficeTask::OfficeTask(std::filesystem::path profile) : m_profile(std::move(profile))
@@ -350,7 +478,7 @@ OfficeTaskSnapshot OfficeTask::snapshot() const
     const bool dirty = draftDirtyLocked();
     return {
         m_data.document, m_data.progress, std::move(settings), m_error, m_data.draftId, m_data.draftText, m_data.exportOptions, m_active,
-        completed, m_generation, m_translating, m_processing, dirty, dirty || m_data.revision != m_data.exportedRevision,
+        completed, m_generation, m_data.revision, m_translating, m_processing, dirty, dirty || m_data.revision != m_data.exportedRevision,
     };
 }
 
@@ -502,39 +630,49 @@ void OfficeTask::exportTo(std::filesystem::path const& path)
     if (m_data.cacheWritable) persistLocked();
 }
 
-std::shared_ptr<OfficeLayoutPreview const> OfficeTask::renderPreview(std::filesystem::path const& renderer)
+std::shared_ptr<OfficeLayoutPreview const> OfficeTask::renderPreview(std::filesystem::path const& renderer, void* cancel)
 {
     std::shared_ptr<OfficeDocumentNative const> document;
     OfficeTranslations text;
     OfficeExportOptions options;
+    uint64_t generation{};
+    uint64_t revision{};
     {
         std::lock_guard lock(m_mutex);
         requireIdleLocked();
         requireLoadedLocked();
-        if (draftDirtyLocked()) applyEditLocked(hstring(m_data.draftId), trimmed(m_data.draftText), false);
         document = m_data.document;
         text = translations(m_data.progress);
         options = m_data.exportOptions;
-        m_processing = true;
+        generation = m_generation;
+        revision = m_data.revision;
     }
-    try {
-        auto directory = std::filesystem::temp_directory_path() /
-            (L"yiyi-office-preview-" + std::wstring(to_hstring(GuidHelper::CreateNewGuid())));
-        if (!std::filesystem::create_directory(directory)) fail(L"无法创建版式预览目录。");
-        auto preview = std::shared_ptr<OfficeLayoutPreview>(new OfficeLayoutPreview(std::move(directory)));
-        auto input = preview->m_directory / (L"preview." + std::wstring(document->kind()));
-        document->exportTo(input, text, options);
-        runRenderer(renderer, preview->m_directory, input);
-        if (!std::filesystem::is_regular_file(preview->path()) || std::filesystem::file_size(preview->path()) == 0)
-            fail(L"LibreOffice 未生成预览 PDF。");
-        std::lock_guard lock(m_mutex);
-        m_processing = false;
-        return preview;
-    } catch (...) {
-        std::lock_guard lock(m_mutex);
-        m_processing = false;
-        throw;
+    checkCancellation(cancel);
+    auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
+        (L"yiyi-office-preview-" + std::wstring(to_hstring(GuidHelper::CreateNewGuid())));
+    if (!std::filesystem::create_directory(directory)) fail(L"无法创建版式预览目录。");
+    auto preview = std::shared_ptr<OfficeLayoutPreview>(new OfficeLayoutPreview(directory));
+    preview->m_generation = generation;
+    preview->m_revision = revision;
+    std::vector<std::filesystem::path> inputs;
+    if (document->kind() == L"docx") {
+        inputs.push_back(directory / L"original.docx");
+        document->exportTo(inputs.back(), {});
+        preview->m_original = directory / L"original.pdf";
     }
+    if (!text.empty() || document->kind() == L"pptx") {
+        checkCancellation(cancel);
+        inputs.push_back(directory / (L"preview." + std::wstring(document->kind())));
+        document->exportTo(inputs.back(), text, options);
+        preview->m_translation = directory / L"preview.pdf";
+    }
+    runRenderer(renderer, directory, inputs, cancel);
+    for (auto input : inputs) {
+        input.replace_extension(L".pdf");
+        if (!std::filesystem::is_regular_file(input) || std::filesystem::file_size(input) == 0)
+            fail(L"排版器未生成完整的预览 PDF。");
+    }
+    return preview;
 }
 
 uint64_t OfficeTask::beginLocked(DocumentSettings settings)
@@ -629,7 +767,7 @@ IAsyncAction OfficeTask::run(uint64_t generation, std::optional<size_t> only, Do
             failedId = segment.id;
             update();
             std::wstring complete;
-            for (const auto& part : splitDocumentText(std::wstring_view(segment.source))) {
+            for (const auto& part : splitOfficeText(std::wstring_view(segment.source))) {
                 if (!part.translate) {
                     complete += std::wstring_view(part.text);
                     continue;
