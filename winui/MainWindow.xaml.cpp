@@ -7,6 +7,7 @@
 
 #include <commctrl.h>
 #include <dwmapi.h>
+#include <windowsx.h>
 #include <winrt/Microsoft.UI.Windowing.h>
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include <winrt/Microsoft.UI.Xaml.Media.h>
@@ -28,6 +29,26 @@ namespace winrt::Yiyi::WinUI::implementation
 
     namespace
     {
+        LRESULT resizeHitTest(HWND window, LPARAM position, LRESULT originalHit)
+        {
+            RECT bounds{};
+            const POINT point{GET_X_LPARAM(position), GET_Y_LPARAM(position)};
+            if (!GetWindowRect(window, &bounds) || !PtInRect(&bounds, point)) return originalHit;
+
+            const auto dpi = GetDpiForWindow(window);
+            const int padding = GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+            const int width = GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi) + padding;
+            const int height = GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) + padding;
+            const int column = point.x < bounds.left + width ? 0 : point.x >= bounds.right - width ? 2 : 1;
+            const int row = point.y < bounds.top + height ? 0 : point.y >= bounds.bottom - height ? 2 : 1;
+            const LRESULT hits[3][3] = {
+                { HTTOPLEFT, HTTOP, HTTOPRIGHT },
+                { HTLEFT, originalHit, HTRIGHT },
+                { HTBOTTOMLEFT, HTBOTTOM, HTBOTTOMRIGHT }
+            };
+            return hits[row][column];
+        }
+
         LRESULT CALLBACK extendClientToFrame(HWND window, UINT message, WPARAM wParam, LPARAM lParam,
                                             UINT_PTR id, DWORD_PTR)
         {
@@ -42,7 +63,13 @@ namespace winrt::Yiyi::WinUI::implementation
                 --bounds.top;
                 return result;
             }
-            return DefSubclassProc(window, message, wParam, lParam);
+            const auto result = DefSubclassProc(window, message, wParam, lParam);
+            if (message == WM_NCHITTEST && (result == HTCLIENT || result == HTCAPTION) &&
+                !IsZoomed(window) && !IsIconic(window) && (GetWindowLongPtrW(window, GWL_STYLE) & WS_THICKFRAME)) {
+                // Keep system resizing when the visible frame is covered by the client area.
+                return resizeHitTest(window, lParam, result);
+            }
+            return result;
         }
 
         void hideWindowBorder(HWND window)
