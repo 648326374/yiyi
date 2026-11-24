@@ -319,8 +319,6 @@ void DocumentWorkspace::build()
                 <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
                 <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
-                <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="{ThemeResource YiyiTextColor}" />
-                <SolidColorBrush x:Key="TextControlForegroundFocused" Color="{ThemeResource YiyiTextColor}" />
                 <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{ThemeResource YiyiMutedColor}" />
                 <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{ThemeResource YiyiMutedColor}" />
                 <StaticResource x:Key="ProgressBarForeground" ResourceKey="YiyiAccentBrush" />

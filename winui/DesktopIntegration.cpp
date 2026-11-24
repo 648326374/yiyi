@@ -3,9 +3,12 @@
 
 #include <bcrypt.h>
 #include <commctrl.h>
+#include <d2d1.h>
+#include <dwrite.h>
 #include <objbase.h>
 #include <sddl.h>
 #include <shellapi.h>
+#include <wrl/client.h>
 
 #include <algorithm>
 #include <array>
@@ -22,6 +25,8 @@
 #pragma comment(lib, "advapi32.lib")
 #pragma comment(lib, "bcrypt.lib")
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "d2d1.lib")
+#pragma comment(lib, "dwrite.lib")
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "shell32.lib")
@@ -29,6 +34,8 @@
 
 namespace yiyi {
 namespace {
+
+using Microsoft::WRL::ComPtr;
 
 constexpr wchar_t brokerClass[] = L"Yiyi.WinUI.DesktopBroker.1";
 constexpr wchar_t bubbleClass[] = L"Yiyi.WinUI.SelectionBubble.1";
@@ -46,7 +53,7 @@ constexpr UINT_PTR selectPollTimer = 2;
 constexpr UINT_PTR bubbleTimer = 3;
 constexpr UINT_PTR closeSubclassId = 1;
 constexpr wchar_t bubbleCaption[] = L"查询选中文字";
-constexpr int bubbleWidth = 118;
+constexpr int bubbleWidth = 124;
 constexpr int bubbleHeight = 34;
 constexpr int bubbleRadius = 8;
 
@@ -514,7 +521,9 @@ struct DesktopIntegration::State {
     void processMouse(UINT event, POINT point);
     void pollSelection();
     void showBubble(const SelectionResult& result);
-    void paintBubbleButton(const DRAWITEMSTRUCT& item) const;
+    bool initializeBubbleDrawing();
+    bool paintBubble(const RECT& bounds);
+    void redrawBubble();
     void dismissBubble();
     void selectBubble();
     void onTimer(UINT_PTR timer);
@@ -534,6 +543,9 @@ struct DesktopIntegration::State {
     COLORREF bubbleBackground = GetSysColor(COLOR_HIGHLIGHT);
     COLORREF bubbleHover = GetSysColor(COLOR_HIGHLIGHT);
     COLORREF bubbleForeground = GetSysColor(COLOR_HIGHLIGHTTEXT);
+    ComPtr<ID2D1DCRenderTarget> bubbleTarget;
+    ComPtr<IDWriteTextFormat> bubbleIconFormat;
+    ComPtr<IDWriteTextFormat> bubbleLabelFormat;
     std::filesystem::path directory;
     std::wstring channel;
     DesktopCallbacks callbacks;
@@ -853,7 +865,7 @@ void DesktopIntegration::State::showBubble(const SelectionResult& result)
         klass.hCursor = LoadCursor(nullptr, IDC_HAND);
         klass.lpszClassName = bubbleClass;
         if (!RegisterClassW(&klass) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS) return;
-        bubble = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE, bubbleClass, L"译意划词",
+        bubble = CreateWindowExW(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_LAYERED, bubbleClass, L"译意划词",
             WS_POPUP, release.x, release.y, bubbleWidth, bubbleHeight, nullptr, nullptr, instance, this);
         if (!bubble) return;
         bubbleButton = CreateWindowExW(0, L"BUTTON", bubbleCaption, WS_CHILD | WS_VISIBLE | BS_OWNERDRAW,
@@ -874,52 +886,108 @@ void DesktopIntegration::State::showBubble(const SelectionResult& result)
     const int width = MulDiv(bubbleWidth, dpi, 96), height = MulDiv(bubbleHeight, dpi, 96);
     const auto x = std::clamp(release.x + MulDiv(12, dpi, 96), monitor.rcWork.left, std::max(monitor.rcWork.left, monitor.rcWork.right - width));
     const auto y = std::clamp(release.y + MulDiv(18, dpi, 96), monitor.rcWork.top, std::max(monitor.rcWork.top, monitor.rcWork.bottom - height));
-    const int diameter = MulDiv(2 * bubbleRadius, dpi, 96);
-    if (const auto region = CreateRoundRectRgn(0, 0, width, height, diameter, diameter)) {
-        if (!SetWindowRgn(bubble, region, FALSE)) DeleteObject(region);
+    if (!paintBubble({x, y, x + width, y + height})) {
+        dismissBubble();
+        return;
     }
-    MoveWindow(bubbleButton, 0, 0, width, height, TRUE);
+    MoveWindow(bubbleButton, 0, 0, width, height, FALSE);
     bubbleSource = result.source;
     bubbleText = result.text;
     bubbleDeadline = GetTickCount64() + 8000;
-    SetWindowPos(bubble, HWND_TOPMOST, x, y, width, height, SWP_NOACTIVATE | SWP_SHOWWINDOW);
+    ShowWindow(bubble, SW_SHOWNOACTIVATE);
     SetTimer(broker, bubbleTimer, 150, nullptr);
 }
 
-void DesktopIntegration::State::paintBubbleButton(const DRAWITEMSTRUCT& item) const
+bool DesktopIntegration::State::initializeBubbleDrawing()
 {
-    const auto dc = item.hDC;
-    const auto saved = SaveDC(dc);
-    if (!saved) return;
+    if (bubbleTarget) return true;
+    ComPtr<ID2D1Factory> graphics;
+    ComPtr<IDWriteFactory> text;
+    if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, graphics.GetAddressOf())) ||
+        FAILED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
+                                  reinterpret_cast<IUnknown**>(text.GetAddressOf())))) return false;
+
+    ComPtr<ID2D1DCRenderTarget> target;
+    const auto properties = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT,
+        D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
+    if (FAILED(graphics->CreateDCRenderTarget(&properties, target.GetAddressOf()))) return false;
+    target->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
+
+    ComPtr<IDWriteTextFormat> icon, label;
+    if (FAILED(text->CreateTextFormat(L"Segoe MDL2 Assets", nullptr, DWRITE_FONT_WEIGHT_NORMAL,
+            DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 16.0f, L"zh-CN", icon.GetAddressOf())) ||
+        FAILED(text->CreateTextFormat(L"Microsoft YaHei UI", nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD,
+            DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13.0f, L"zh-CN", label.GetAddressOf()))) return false;
+    icon->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+    icon->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+    label->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+    label->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+    bubbleIconFormat = std::move(icon);
+    bubbleLabelFormat = std::move(label);
+    bubbleTarget = std::move(target);
+    return true;
+}
+
+bool DesktopIntegration::State::paintBubble(const RECT& bounds)
+{
+    if (!initializeBubbleDrawing()) return false;
+    SIZE size{bounds.right - bounds.left, bounds.bottom - bounds.top};
+    const RECT area{0, 0, size.cx, size.cy};
+    BITMAPINFO info{};
+    info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    info.bmiHeader.biWidth = size.cx;
+    info.bmiHeader.biHeight = -size.cy;
+    info.bmiHeader.biPlanes = 1;
+    info.bmiHeader.biBitCount = 32;
+    info.bmiHeader.biCompression = BI_RGB;
+    void* pixels = nullptr;
+    const std::unique_ptr<void, decltype(&DeleteObject)> bitmap(
+        CreateDIBSection(nullptr, &info, DIB_RGB_COLORS, &pixels, nullptr, 0), DeleteObject);
+    const std::unique_ptr<std::remove_pointer_t<HDC>, decltype(&DeleteDC)> dc(CreateCompatibleDC(nullptr), DeleteDC);
+    if (!bitmap || !dc || !SelectObject(dc.get(), bitmap.get())) return false;
+    const auto dpi = static_cast<float>(GetDpiForWindow(bubble));
+    bubbleTarget->SetDpi(dpi, dpi);
+    if (FAILED(bubbleTarget->BindDC(dc.get(), &area))) {
+        bubbleTarget.Reset();
+        return false;
+    }
+
     HIGHCONTRASTW contrast{sizeof(contrast)};
     const bool highContrast = SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
         (contrast.dwFlags & HCF_HIGHCONTRASTON);
-    const bool hover = bubbleHovered && !(item.itemState & ODS_SELECTED);
-    SetDCBrushColor(dc, highContrast ? GetSysColor(COLOR_HIGHLIGHT) : hover ? bubbleHover : bubbleBackground);
-    FillRect(dc, &item.rcItem, static_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
-    SetBkMode(dc, TRANSPARENT);
-    SetTextColor(dc, highContrast ? GetSysColor(COLOR_HIGHLIGHTTEXT) : bubbleForeground);
-
-    const int dpi = static_cast<int>(GetDpiForWindow(item.hwndItem));
-    const auto font = [dpi](int size, int weight, const wchar_t* family) {
-        return CreateFontW(-MulDiv(size, dpi, 96), 0, 0, 0, weight, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
-            OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE, family);
+    const bool hover = bubbleHovered && !(SendMessageW(bubbleButton, BM_GETSTATE, 0, 0) & BST_PUSHED);
+    const auto color = [](COLORREF value) {
+        return D2D1::ColorF(GetRValue(value) / 255.0f, GetGValue(value) / 255.0f, GetBValue(value) / 255.0f);
     };
-    const auto iconFont = font(14, FW_NORMAL, L"Segoe MDL2 Assets");
-    const auto textFont = font(12, FW_SEMIBOLD, L"Microsoft YaHei UI");
-    auto label = item.rcItem;
-    label.left += MulDiv(10, dpi, 96);
-    if (iconFont) {
-        SelectObject(dc, iconFont);
-        RECT icon{label.left, label.top, label.left + MulDiv(16, dpi, 96), label.bottom};
-        DrawTextW(dc, L"\uE8C1", 1, &icon, DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
-        label.left = icon.right + MulDiv(5, dpi, 96);
+    const auto background = color(highContrast ? GetSysColor(COLOR_HIGHLIGHT) : hover ? bubbleHover : bubbleBackground);
+    const auto foreground = color(highContrast ? GetSysColor(COLOR_HIGHLIGHTTEXT) : bubbleForeground);
+    ComPtr<ID2D1SolidColorBrush> brush;
+    if (FAILED(bubbleTarget->CreateSolidColorBrush(background, brush.GetAddressOf()))) return false;
+
+    const auto layout = bubbleTarget->GetSize();
+    bubbleTarget->BeginDraw();
+    bubbleTarget->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
+    bubbleTarget->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(0, 0, layout.width, layout.height),
+        bubbleRadius, bubbleRadius), brush.Get());
+    brush->SetColor(foreground);
+    bubbleTarget->DrawText(L"\uE8C1", 1, bubbleIconFormat.Get(), D2D1::RectF(10, 0, 28, layout.height), brush.Get());
+    bubbleTarget->DrawText(bubbleCaption, ARRAYSIZE(bubbleCaption) - 1, bubbleLabelFormat.Get(),
+        D2D1::RectF(34, 0, layout.width - 10, layout.height), brush.Get());
+    if (FAILED(bubbleTarget->EndDraw())) {
+        bubbleTarget.Reset();
+        return false;
     }
-    SelectObject(dc, textFont ? textFont : GetStockObject(DEFAULT_GUI_FONT));
-    DrawTextW(dc, bubbleCaption, -1, &label, DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
-    RestoreDC(dc, saved);
-    if (iconFont) DeleteObject(iconFont);
-    if (textFont) DeleteObject(textFont);
+
+    POINT position{bounds.left, bounds.top};
+    POINT origin{};
+    BLENDFUNCTION blend{AC_SRC_OVER, 0, 255, AC_SRC_ALPHA};
+    return UpdateLayeredWindow(bubble, nullptr, &position, &size, dc.get(), &origin, 0, &blend, ULW_ALPHA) != FALSE;
+}
+
+void DesktopIntegration::State::redrawBubble()
+{
+    RECT bounds{};
+    if (bubble && IsWindowVisible(bubble) && GetWindowRect(bubble, &bounds)) paintBubble(bounds);
 }
 
 void DesktopIntegration::State::dismissBubble()
@@ -1006,11 +1074,8 @@ LRESULT CALLBACK DesktopIntegration::State::bubbleProc(HWND hwnd, UINT message, 
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(info->lpCreateParams));
     }
     if (message == WM_MOUSEACTIVATE) return MA_NOACTIVATE;
-    if (message == WM_DRAWITEM && wparam == AcceptSelection) {
-        const auto state = reinterpret_cast<State*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
-        if (state) state->paintBubbleButton(*reinterpret_cast<const DRAWITEMSTRUCT*>(lparam));
-        return TRUE;
-    }
+    // The layered surface paints the visible button. The control handles input and accessibility.
+    if (message == WM_DRAWITEM && wparam == AcceptSelection) return TRUE;
     if (message == WM_COMMAND && LOWORD(wparam) == AcceptSelection && HIWORD(wparam) == BN_CLICKED) {
         const auto state = reinterpret_cast<State*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
         if (state) {
@@ -1037,14 +1102,21 @@ LRESULT CALLBACK DesktopIntegration::State::bubbleButtonProc(HWND hwnd, UINT mes
             TRACKMOUSEEVENT tracking{sizeof(tracking), TME_LEAVE, hwnd, 0};
             if (TrackMouseEvent(&tracking)) {
                 state->bubbleHovered = true;
-                InvalidateRect(hwnd, nullptr, FALSE);
+                state->redrawBubble();
             }
         }
         break;
     case WM_MOUSELEAVE:
         state->bubbleHovered = false;
-        InvalidateRect(hwnd, nullptr, FALSE);
+        state->redrawBubble();
         break;
+    case WM_LBUTTONDOWN:
+    case WM_LBUTTONUP:
+    case WM_CAPTURECHANGED: {
+        const auto result = DefSubclassProc(hwnd, message, wparam, lparam);
+        if (IsWindowVisible(hwnd)) state->redrawBubble();
+        return result;
+    }
     case WM_NCDESTROY:
         RemoveWindowSubclass(hwnd, bubbleButtonProc, id);
         state->bubbleButton = nullptr;
@@ -1107,7 +1179,7 @@ void DesktopIntegration::setSelectionBubbleColors(COLORREF background, COLORREF 
     m_state->bubbleBackground = background;
     m_state->bubbleHover = hover;
     m_state->bubbleForeground = foreground;
-    if (m_state->bubbleButton) InvalidateRect(m_state->bubbleButton, nullptr, FALSE);
+    m_state->redrawBubble();
 }
 
 bool DesktopIntegration::applyShortcuts(bool enabled, std::wstring_view show, std::wstring_view selection)

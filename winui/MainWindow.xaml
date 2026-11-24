@@ -160,8 +160,6 @@
                         <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
                         <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
                         <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
-                        <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="{ThemeResource YiyiTextColor}" />
-                        <SolidColorBrush x:Key="TextControlForegroundFocused" Color="{ThemeResource YiyiTextColor}" />
                         <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{ThemeResource YiyiMutedColor}" />
                         <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{ThemeResource YiyiMutedColor}" />
                     </Grid.Resources>
