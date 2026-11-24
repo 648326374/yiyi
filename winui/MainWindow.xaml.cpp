@@ -91,7 +91,7 @@ namespace winrt::Yiyi::WinUI::implementation
         };
         constexpr std::wstring_view tones[] = { L"自然", L"正式", L"口语", L"学术" };
         constexpr std::wstring_view promptTones[] = { L"natural", L"formal", L"conversational", L"academic" };
-        constexpr std::wstring_view modes[] = { L"auto", L"translation", L"dictionary" };
+
         template <size_t N>
         int valueIndex(std::wstring_view const (&values)[N], hstring const& value)
         {
@@ -269,7 +269,7 @@ namespace winrt::Yiyi::WinUI::implementation
             reportError(L"无法读取偏好设置，请检查数据目录。");
         }
         fillPreferences();
-        refreshProviders();
+        updateWorkbenchChrome();
         SettingsDataDirectory().Text(L"数据目录：" + hstring(m_dataDirectory.native()));
         Navigation().SelectedItem(TranslateItem());
         updateTheme();
@@ -284,7 +284,6 @@ namespace winrt::Yiyi::WinUI::implementation
         SourceLanguage().SelectedIndex(valueIndex(languages, m_settings.sourceLanguage));
         TargetLanguage().SelectedIndex(std::max(0, valueIndex(languages, m_settings.targetLanguage) - 1));
         TonePicker().SelectedIndex(valueIndex(tones, m_settings.tone));
-        ModeSegments().SelectedIndex(valueIndex(modes, m_settings.mode));
     }
 
     void MainWindow::NavigationChanged(NavigationView const&, NavigationViewSelectionChangedEventArgs const& args)
@@ -292,16 +291,16 @@ namespace winrt::Yiyi::WinUI::implementation
         const auto item = args.SelectedItem().try_as<NavigationViewItem>();
         if (!item) return;
         const auto page = unbox_value<hstring>(item.Tag());
-        PageTitle().Text(unbox_value<hstring>(item.Content()));
-        PageTitle().Visibility(page == L"pdf" || page == L"documents" ? Visibility::Collapsed : Visibility::Visible);
-        if (page == L"translate") PageSubtitle().Text(L"从一个词，到更广阔的世界。");
-        else if (page == L"history") PageSubtitle().Text(L"每一次好奇，都有迹可循。");
-        else if (page == L"favorites") PageSubtitle().Text(L"把不期而遇的好词，变成熟悉的表达。");
-        else if (page == L"settings") PageSubtitle().Text(L"用习惯的模型，按自己的方式理解世界。");
-        else PageSubtitle().Text(L"");
-        PageSubtitle().Visibility(PageSubtitle().Text().empty() ? Visibility::Collapsed : Visibility::Visible);
         const bool library = page == L"history" || page == L"favorites";
         const bool settings = page == L"settings";
+        const bool showHeader = library || settings;
+        PageHeader().Visibility(showHeader ? Visibility::Visible : Visibility::Collapsed);
+        if (showHeader) {
+            PageTitle().Text(unbox_value<hstring>(item.Content()));
+            if (page == L"history") PageSubtitle().Text(L"每一次好奇，都有迹可循。");
+            else if (page == L"favorites") PageSubtitle().Text(L"把不期而遇的好词，变成熟悉的表达。");
+            else PageSubtitle().Text(L"用习惯的模型，按自己的方式理解世界。");
+        }
         const bool leavingLibrary = !library && LibraryPage().Visibility() == Visibility::Visible;
         const bool leavingSettings = !settings && SettingsPage().Visibility() == Visibility::Visible;
         TranslatePage().Visibility(page == L"translate" ? Visibility::Visible : Visibility::Collapsed);
@@ -347,7 +346,6 @@ namespace winrt::Yiyi::WinUI::implementation
             next.sourceLanguage = hstring(valueAt(languages, SourceLanguage().SelectedIndex()));
             next.targetLanguage = hstring(valueAt(languages, TargetLanguage().SelectedIndex() + 1));
             next.tone = hstring(valueAt(tones, TonePicker().SelectedIndex()));
-            next.mode = hstring(valueAt(modes, ModeSegments().SelectedIndex()));
             applySettings(std::move(next));
             updateTheme();
             updateWorkbenchChrome();
@@ -356,7 +354,6 @@ namespace winrt::Yiyi::WinUI::implementation
             SourceLanguage().SelectedIndex(valueIndex(languages, m_settings.sourceLanguage));
             TargetLanguage().SelectedIndex(std::max(0, valueIndex(languages, m_settings.targetLanguage) - 1));
             TonePicker().SelectedIndex(valueIndex(tones, m_settings.tone));
-            ModeSegments().SelectedIndex(valueIndex(modes, m_settings.mode));
             m_updating = false;
             reportError(L"无法保存偏好设置。");
         }
@@ -395,15 +392,22 @@ namespace winrt::Yiyi::WinUI::implementation
         }
     }
 
-    void MainWindow::OpenWorkbenchSettings(IInspectable const&, RoutedEventArgs const&)
+    void MainWindow::WorkbenchPaste(IInspectable const&, TextControlPasteEventArgs const& args)
     {
-        Navigation().SelectedItem(SettingsItem());
+        args.Handled(true);
+        PasteWorkbenchText(nullptr, nullptr);
     }
 
     fire_and_forget MainWindow::PasteWorkbenchText(IInspectable const&, RoutedEventArgs const&)
     {
-        if (m_busy) co_return;
+        if (m_closed || m_busy || TranslatePage().Visibility() != Visibility::Visible) co_return;
         const auto lifetime = get_strong();
+        const auto editor = SourceText();
+        const auto input = editor.Text();
+        const auto start = editor.SelectionStart();
+        const auto length = editor.SelectionLength();
+        const auto requestSerial = m_requestSerial;
+        const auto limit = static_cast<size_t>(editor.MaxLength());
         try {
             const auto clipboard = Clipboard::GetContent();
             if (!clipboard.Contains(StandardDataFormats::Text())) {
@@ -411,18 +415,38 @@ namespace winrt::Yiyi::WinUI::implementation
                 co_return;
             }
             const auto pasted = co_await clipboard.GetTextAsync();
-            if (m_closed || m_busy) co_return;
-            if (pasted.empty()) notice(L"剪贴板中没有文本。");
-            else if (pasted.size() > 24000) notice(L"单次最多支持 24,000 个字符。", InfoBarSeverity::Warning);
-            else SourceText().Text(pasted);
+            if (m_closed || m_busy || requestSerial != m_requestSerial ||
+                TranslatePage().Visibility() != Visibility::Visible || editor.Text() != input ||
+                editor.SelectionStart() != start || editor.SelectionLength() != length) co_return;
+            const auto retained = static_cast<size_t>(input.size()) - static_cast<size_t>(length);
+            if (retained + pasted.size() > limit) {
+                notice(L"单次最多支持 24,000 个字符。", InfoBarSeverity::Warning);
+                co_return;
+            }
+            if (trimmed(pasted).empty()) {
+                notice(L"剪贴板中没有可翻译的文字。");
+                co_return;
+            }
+            editor.SelectedText(pasted);
+            editor.Select(editor.SelectionStart() + editor.SelectionLength(), 0);
         } catch (...) {
             if (!m_closed) reportError(L"无法读取剪贴板。");
+            co_return;
         }
+        Translate(nullptr, nullptr);
     }
 
     void MainWindow::WorkbenchTextChanged(IInspectable const&, TextChangedEventArgs const&)
     {
         updateWorkbenchCharacterCount();
+    }
+
+    void MainWindow::WorkbenchSourceKeyDown(IInspectable const&, Input::KeyRoutedEventArgs const& args)
+    {
+        if (args.Key() != Windows::System::VirtualKey::Enter || !(GetKeyState(VK_CONTROL) & 0x8000) ||
+            ((GetKeyState(VK_SHIFT) | GetKeyState(VK_MENU) | GetKeyState(VK_LWIN) | GetKeyState(VK_RWIN)) & 0x8000)) return;
+        args.Handled(true);
+        if (!args.KeyStatus().WasKeyDown) Translate(nullptr, nullptr);
     }
 
     void MainWindow::updateWorkbenchCharacterCount()
@@ -472,32 +496,30 @@ namespace winrt::Yiyi::WinUI::implementation
             SourceText().Focus(FocusState::Programmatic);
             return;
         }
-        if (input.size() > 24000) {
+        if (input.size() > static_cast<size_t>(SourceText().MaxLength())) {
             notice(L"单次最多支持 24,000 个字符。", InfoBarSeverity::Warning);
             return;
         }
-        const auto index = ActiveProvider().SelectedIndex();
-        if (index < 0) {
+        const auto provider = std::ranges::find(m_settings.providers, m_settings.selectedProviderId, &::yiyi::Provider::id);
+        if (provider == m_settings.providers.end()) {
             Navigation().SelectedItem(SettingsItem());
             notice(L"请先配置一个 AI 服务。");
             return;
         }
 
-        const auto& provider = m_settings.providers[index];
-        const int mode = ModeSegments().SelectedIndex();
         const int source = SourceLanguage().SelectedIndex();
         const int target = TargetLanguage().SelectedIndex() + 1;
-        const bool dictionary = mode == 2 || (mode == 0 && looksLikeWord(input));
+        const bool dictionary = looksLikeWord(input);
         ::yiyi::HistoryRecord record{};
         record.input = input;
         record.kind = dictionary ? L"dictionary" : L"translation";
         record.source = hstring(valueAt(languages, source));
         record.target = hstring(valueAt(languages, target));
-        record.provider = provider.name;
-        record.model = provider.model;
+        record.provider = provider->name;
+        record.model = provider->model;
         const auto system = translationPrompt(source, target, TonePicker().SelectedIndex(), dictionary,
-                                              provider.dictionaryMode == L"detailed");
-        runRequest(provider, system, std::move(input), std::move(record));
+                                              provider->dictionaryMode == L"detailed");
+        runRequest(*provider, system, std::move(input), std::move(record));
     }
 
     fire_and_forget MainWindow::runRequest(::yiyi::Provider provider, hstring system, hstring input,
@@ -593,12 +615,12 @@ namespace winrt::Yiyi::WinUI::implementation
         CancelButton().Visibility(showingStop ? Visibility::Visible : Visibility::Collapsed);
         CancelButton().IsEnabled(showingStop);
         ClearButton().IsEnabled(!busy);
-        ActiveProvider().IsEnabled(!busy);
+        PasteButton().IsEnabled(!busy);
         SourceText().IsReadOnly(busy);
         SourceLanguage().IsEnabled(!busy);
         TargetLanguage().IsEnabled(!busy);
+        TonePicker().IsEnabled(!busy);
         SwapButton().IsEnabled(!busy);
-        ModeSegments().IsEnabled(!busy);
         AddProviderButton().IsEnabled(!busy);
         updateResultActions();
         updateHistoryActions();
@@ -820,21 +842,15 @@ namespace winrt::Yiyi::WinUI::implementation
     {
         const bool hasResult = DictionaryScroll().Visibility() == Visibility::Visible || !ResultText().Text().empty();
         WorkbenchResultEmpty().Visibility(hasResult ? Visibility::Collapsed : Visibility::Visible);
-        WorkbenchExampleBadge().Visibility(m_workbenchExample ? Visibility::Visible : Visibility::Collapsed);
-        WorkbenchExampleHint().Visibility(m_workbenchExample ? Visibility::Visible : Visibility::Collapsed);
+        ResultText().IsTabStop(hasResult);
         WorkbenchEmptyExplanation().Visibility(m_workbenchRequest ? Visibility::Collapsed : Visibility::Visible);
         WorkbenchBusyFeedback().Visibility(m_workbenchRequest ? Visibility::Visible : Visibility::Collapsed);
         WorkbenchSpinner().IsActive(m_workbenchRequest && !hasResult);
-        WorkbenchResultProvider().Text(m_workbenchExample ? hstring{L"内置示例，用于展示词典排版"}
-            : m_workbenchProvider.empty() ? hstring{L"由你选择的 AI 服务提供结果"} : m_workbenchProvider);
+        WorkbenchResultFooter().Visibility(hasResult ? Visibility::Visible : Visibility::Collapsed);
+        WorkbenchResultProvider().Text(m_workbenchExample ? hstring{L"内置词条例子"} : m_workbenchProvider);
         WorkbenchResultTiming().Text(m_workbenchTiming);
         WorkbenchResultTiming().Visibility(m_workbenchTiming.empty() ? Visibility::Collapsed : Visibility::Visible);
         WorkbenchStatus().Text(m_workbenchRequest ? L"生成中…" : hasResult && !m_workbenchExample ? L"AI 生成 · 仅供参考" : L"");
-        const bool dictionaryMode = ModeSegments().SelectedIndex() == 2;
-        const hstring action = dictionaryMode ? L"查询词条" : L"开始翻译";
-        WorkbenchTranslateCaption().Text(action);
-        Automation::AutomationProperties::SetName(TranslateButton(), action);
-        TonePicker().IsEnabled(!m_busy && !dictionaryMode);
     }
 
     void MainWindow::setFavorite(int64_t id, bool favorite)

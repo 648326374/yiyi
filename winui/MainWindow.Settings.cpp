@@ -372,29 +372,6 @@ namespace winrt::Yiyi::WinUI::implementation
         }
     };
 
-    void MainWindow::refreshProviders()
-    {
-        const auto wasUpdating = m_updating;
-        m_updating = true;
-        auto combo = ActiveProvider();
-        const auto services = combo.Items();
-        const auto& providers = m_settings.providers;
-        const bool rebuildCombo = services.Size() != providers.size() ||
-            !std::ranges::equal(services, providers, {}, [](auto const& item) { return unbox_value<hstring>(item); },
-                &::yiyi::Provider::name);
-        if (rebuildCombo) services.Clear();
-        int active = -1;
-        for (size_t index = 0; index < providers.size(); ++index) {
-            const auto& item = providers[index];
-            if (rebuildCombo) services.Append(box_value(item.name));
-            if (item.id == m_settings.selectedProviderId) active = static_cast<int>(index);
-        }
-        combo.SelectedIndex(active);
-        m_updating = wasUpdating;
-        refreshProviderRows();
-        updateWorkbenchChrome();
-    }
-
     void MainWindow::refreshProviderRows()
     {
         if (SettingsPage().Visibility() != Visibility::Visible) return;
@@ -471,23 +448,20 @@ namespace winrt::Yiyi::WinUI::implementation
 
     void MainWindow::selectProvider(hstring const& id)
     {
-        if (m_busy || id == m_settings.selectedProviderId) return;
+        if (id == m_settings.selectedProviderId) return;
+        if (m_busy) {
+            notice(L"请等待当前请求完成，或先停止生成。", InfoBarSeverity::Warning);
+            return;
+        }
         try {
             auto next = m_settings;
             next.selectedProviderId = id;
             applySettings(std::move(next));
-            refreshProviders();
+            refreshProviderRows();
         } catch (...) {
-            refreshProviders();
+            refreshProviderRows();
             reportError(L"无法保存 AI 服务选择。");
         }
-    }
-
-    void MainWindow::ActiveProviderChanged(IInspectable const&, SelectionChangedEventArgs const&)
-    {
-        const int index = ActiveProvider().SelectedIndex();
-        if (!m_updating && index >= 0 && static_cast<size_t>(index) < m_settings.providers.size())
-            selectProvider(m_settings.providers[index].id);
     }
 
     void MainWindow::ApplySidebarTheme(IInspectable const& sender, RoutedEventArgs const&)
@@ -592,7 +566,7 @@ namespace winrt::Yiyi::WinUI::implementation
                         next.unreadableCredentials.erase(provider.id);
                     if (next.selectedProviderId.empty()) next.selectedProviderId = provider.id;
                     self->applySettings(std::move(next));
-                    self->refreshProviders();
+                    self->refreshProviderRows();
                     self->notice(L"AI 服务已保存。", InfoBarSeverity::Success);
                 } catch (...) {
                     args.Cancel(true);
@@ -631,7 +605,7 @@ namespace winrt::Yiyi::WinUI::implementation
                 next.selectedProviderId = next.providers.empty() ? hstring{} : next.providers.front().id;
             if (next.visionProviderId == id) next.visionProviderId.clear();
             applySettings(std::move(next));
-            refreshProviders();
+            refreshProviderRows();
             notice(L"AI 服务已移除。");
         } catch (...) {
             if (!m_closed) reportError(L"无法移除 AI 服务。");

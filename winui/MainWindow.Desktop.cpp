@@ -164,7 +164,6 @@ namespace winrt::Yiyi::WinUI::implementation
         }
         ShowDesktopWorkspace();
         SourceText().Text(hstring(text));
-        ModeSegments().SelectedIndex(0);
         Translate(nullptr, nullptr);
     }
 }

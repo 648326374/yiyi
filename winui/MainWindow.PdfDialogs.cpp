@@ -180,7 +180,6 @@ namespace winrt::Yiyi::WinUI::implementation
                 next.pdfRecognitionPixels = quality.SelectedIndex() == 1 ? 2400 : 1800;
                 next.pdfRequestTimeout = timeouts[std::max(0, timeout.SelectedIndex())];
                 applySettings(std::move(next));
-                refreshProviders();
             }
         } catch (...) {
             if (!m_closed) showPdfError(to_message());

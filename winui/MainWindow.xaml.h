@@ -31,11 +31,12 @@ namespace winrt::Yiyi::WinUI::implementation
         void StartScreenshot();
         void NavigationChanged(Microsoft::UI::Xaml::Controls::NavigationView const&,
             Microsoft::UI::Xaml::Controls::NavigationViewSelectionChangedEventArgs const&);
-        void ActiveProviderChanged(IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void PreferencesChanged(IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void LibrarySelectionChanged(IInspectable const&, Microsoft::UI::Xaml::Controls::SelectionChangedEventArgs const&);
         void SearchChanged(IInspectable const&, Microsoft::UI::Xaml::Controls::TextChangedEventArgs const&);
         void WorkbenchTextChanged(IInspectable const&, Microsoft::UI::Xaml::Controls::TextChangedEventArgs const&);
+        void WorkbenchPaste(IInspectable const&, Microsoft::UI::Xaml::Controls::TextControlPasteEventArgs const&);
+        void WorkbenchSourceKeyDown(IInspectable const&, Microsoft::UI::Xaml::Input::KeyRoutedEventArgs const&);
         void OpenLibraryItem(IInspectable const&, Microsoft::UI::Xaml::Controls::ItemClickEventArgs const&);
 
         void Translate(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -44,7 +45,6 @@ namespace winrt::Yiyi::WinUI::implementation
         void Copy(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void SwapLanguages(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void ApplySidebarTheme(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
-        void OpenWorkbenchSettings(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         fire_and_forget PasteWorkbenchText(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void LoadWorkbenchExample(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
         void NewLibraryQuery(IInspectable const&, Microsoft::UI::Xaml::RoutedEventArgs const&);
@@ -91,7 +91,6 @@ namespace winrt::Yiyi::WinUI::implementation
 
     private:
         void fillPreferences();
-        void refreshProviders();
         void refreshProviderRows();
         void selectProvider(hstring const& id);
         fire_and_forget showProviderEditor(hstring id, int preset);

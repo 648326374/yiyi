@@ -52,3 +52,10 @@ add_test(NAME office-smoke COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOUR
 add_test(NAME office-task-smoke COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/office_task_cases.py"
     "$<TARGET_FILE:office-task-smoke>" "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/fixtures/office" "$<TARGET_FILE:office-preview-renderer>")
 set_tests_properties(text-client-smoke storage-smoke dictionary-smoke native-image-smoke document-smoke office-smoke office-task-smoke PROPERTIES TIMEOUT 40)
+
+set(YIYI_WORKBENCH_EXE "" CACHE FILEPATH "Built Yiyi executable for the interactive workbench test")
+if(YIYI_WORKBENCH_EXE)
+    add_test(NAME workbench-smoke COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/workbench_smoke.py"
+        "${YIYI_WORKBENCH_EXE}")
+    set_tests_properties(workbench-smoke PROPERTIES RUN_SERIAL TRUE TIMEOUT 120)
+endif()

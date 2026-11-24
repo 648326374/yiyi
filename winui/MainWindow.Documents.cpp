@@ -60,12 +60,6 @@ namespace winrt::Yiyi::WinUI::implementation
                     selectText(self->SourceLanguage(), settings.sourceLanguage);
                     selectText(self->TargetLanguage(), settings.targetLanguage);
                     selectText(self->TonePicker(), settings.tone);
-                    for (size_t i = 0; i < self->m_settings.providers.size(); ++i) {
-                        if (self->m_settings.providers[i].id == settings.provider.id) {
-                            self->ActiveProvider().SelectedIndex(static_cast<int>(i));
-                            break;
-                        }
-                    }
                     self->m_updating = false;
                 };
                 host.openSettings = [weak] {

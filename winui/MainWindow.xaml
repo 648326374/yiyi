@@ -126,34 +126,19 @@
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <Grid ColumnSpacing="12">
+                <Grid x:Name="PageHeader" ColumnSpacing="12" Visibility="Collapsed">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <StackPanel Spacing="4">
-                        <TextBlock x:Name="PageTitle" Style="{StaticResource YiyiTitle}" Text="翻译工作台" />
-                        <TextBlock x:Name="PageSubtitle" Style="{StaticResource YiyiBodyLabel}" Text="从一个词，到更广阔的世界。" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
-                                Visibility="{Binding Visibility, ElementName=TranslatePage}">
-                        <Button x:Name="ScreenshotButton" Style="{StaticResource YiyiButton}" Height="34" MinHeight="34"
-                                AutomationProperties.Name="截图取字" Click="PickScreenshot" Padding="9,4">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon Glyph="&#xE722;" FontSize="13" />
-                                <TextBlock Text="截图取字" />
-                            </StackPanel>
-                        </Button>
-                        <Border x:Name="WorkbenchExampleBadge" CornerRadius="15" Height="30" Padding="13,0"
-                                Background="{ThemeResource YiyiAccentSoftBrush}" Visibility="Collapsed">
-                            <TextBlock Text="示例预览 · 未发送请求" Style="{StaticResource YiyiBodyLabel}" FontSize="11"
-                                       Foreground="{ThemeResource YiyiAccentBrush}" VerticalAlignment="Center" />
-                        </Border>
+                    <StackPanel Spacing="4" VerticalAlignment="Center">
+                        <TextBlock x:Name="PageTitle" Style="{StaticResource YiyiTitle}" />
+                        <TextBlock x:Name="PageSubtitle" Style="{StaticResource YiyiBodyLabel}" />
                     </StackPanel>
                     <TextBlock x:Name="LibraryRecordCount" Grid.Column="1" Text="0 条记录" VerticalAlignment="Center"
                                Style="{StaticResource YiyiBodyLabel}" Visibility="{Binding Visibility, ElementName=LibraryPage}" />
                 </Grid>
-                <Grid x:Name="TranslatePage" Grid.Row="1" RowSpacing="16" Margin="0,0,0,4">
+                <Grid x:Name="TranslatePage" Grid.RowSpan="2" RowSpacing="10" Margin="0,0,0,2">
                     <Grid.Resources>
                         <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
                         <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
@@ -162,239 +147,164 @@
                         <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
                         <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="{ThemeResource YiyiMutedColor}" />
                         <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="{ThemeResource YiyiMutedColor}" />
+                        <Style x:Key="WorkbenchActionButton" TargetType="Button" BasedOn="{StaticResource YiyiPrimaryButton}">
+                            <Setter Property="Width" Value="38" />
+                            <Setter Property="Height" Value="32" />
+                            <Setter Property="MinHeight" Value="32" />
+                            <Setter Property="Padding" Value="0" />
+                        </Style>
                     </Grid.Resources>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="40" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="2*" MinHeight="144" MaxHeight="260" />
+                        <RowDefinition Height="3*" MinHeight="144" />
                     </Grid.RowDefinitions>
-                    <Grid ColumnSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <Border CornerRadius="10" Background="{ThemeResource YiyiHoverBrush}" Padding="4"
-                                VerticalAlignment="Center">
-                            <ListView x:Name="ModeSegments" HorizontalAlignment="Left" SelectionMode="Single"
-                                      SelectedIndex="0" SelectionChanged="PreferencesChanged"
-                                      ScrollViewer.HorizontalScrollMode="Disabled" ScrollViewer.VerticalScrollMode="Disabled"
-                                      AutomationProperties.Name="翻译模式">
-                                <ListView.ItemsPanel>
-                                    <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
-                                </ListView.ItemsPanel>
-                                <ListViewItem Content="智能识别" Width="80" Style="{StaticResource YiyiModeSegment}" />
-                                <ListViewItem Content="文本翻译" Width="80" Style="{StaticResource YiyiModeSegment}" />
-                                <ListViewItem Content="词典" Width="58" Style="{StaticResource YiyiModeSegment}" />
-                            </ListView>
-                        </Border>
-                        <Viewbox Grid.Column="2" Width="21" Height="21" VerticalAlignment="Center" AutomationProperties.AccessibilityView="Raw">
-                            <Canvas Width="24" Height="24">
-                                <Path Data="M12 2L14.5 8.5L21 11L14.5 13.5L12 20L9.5 13.5L3 11L9.5 8.5Z M21 16V22 M18 19H24 M3 1V5 M1 3H5"
-                                      Stroke="{ThemeResource YiyiAccentBrush}" StrokeThickness="1.6" StrokeLineJoin="Round" />
-                            </Canvas>
-                        </Viewbox>
-                        <ComboBox x:Name="ActiveProvider" Grid.Column="3" AutomationProperties.Name="AI 服务"
-                                  PlaceholderText="选择 AI 服务" Style="{StaticResource YiyiSelect}" Width="164" Height="40"
-                                  SelectionChanged="ActiveProviderChanged" />
-                        <Button Grid.Column="4" Style="{StaticResource YiyiButton}" Width="40" Height="40" Padding="0"
-                                AutomationProperties.Name="管理 AI 服务" ToolTipService.ToolTip="管理 AI 服务" Click="OpenWorkbenchSettings">
-                            <FontIcon Glyph="&#xE713;" FontSize="15" />
-                        </Button>
-                    </Grid>
-
-                    <Grid Grid.Row="1" ColumnSpacing="14">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="336*" />
-                            <ColumnDefinition Width="434*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource YiyiCard}">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="57" />
-                                    <RowDefinition Height="1" />
-                                    <RowDefinition Height="*" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="1" />
-                                    <RowDefinition Height="115" />
-                                </Grid.RowDefinitions>
-                                <Grid Margin="15,0,12,0" ColumnSpacing="5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Text="原文" Style="{StaticResource YiyiBodyLabel}" FontSize="11" VerticalAlignment="Center" />
-                                    <ComboBox x:Name="SourceLanguage" Grid.Column="1" AutomationProperties.Name="原文语言" MinWidth="108"
-                                              Style="{StaticResource YiyiQuietSelect}" VerticalAlignment="Center"
-                                              SelectionChanged="PreferencesChanged" />
-                                    <Button x:Name="SwapButton" Grid.Column="2" Style="{StaticResource YiyiGhostButton}"
-                                            ToolTipService.ToolTip="交换语言" AutomationProperties.Name="交换语言" Click="SwapLanguages">
-                                        <FontIcon Glyph="&#xE8AB;" FontSize="14" />
-                                    </Button>
-                                    <Button x:Name="ClearButton" Grid.Column="4" Style="{StaticResource YiyiGhostButton}"
-                                            ToolTipService.ToolTip="清空输入和结果" AutomationProperties.Name="清空输入和结果" Click="Clear">
-                                        <FontIcon Glyph="&#xE711;" FontSize="12" />
-                                    </Button>
-                                </Grid>
-                                <Border Grid.Row="1" Background="{ThemeResource YiyiBorderBrush}" />
-                                <TextBox x:Name="SourceText" Grid.Row="2" Margin="20,16,17,8" Style="{StaticResource YiyiEditor}"
-                                         AutomationProperties.Name="原文" AcceptsReturn="True" MaxLength="24000"
-                                         TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"
-                                         PlaceholderText="输入一个单词、短语，&#10;或粘贴一段想翻译的文字…" TextChanged="WorkbenchTextChanged" />
-                                <StackPanel Grid.Row="3" Margin="17,0,17,13" Spacing="9">
-                                    <Border x:Name="WorkbenchExampleHint" Visibility="Collapsed" CornerRadius="8" Padding="12,14"
-                                            Background="{ThemeResource YiyiSubtleBrush}">
-                                        <StackPanel Spacing="6">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <FontIcon Glyph="&#xE82D;" FontSize="14" Foreground="{ThemeResource YiyiAccentBrush}" />
-                                                <TextBlock Text="好奇心，是理解的开始" Style="{StaticResource YiyiBodyLabel}" FontSize="11"
-                                                           Foreground="{ThemeResource YiyiTextBrush}" FontWeight="SemiBold" />
-                                            </StackPanel>
-                                            <TextBlock Text="右侧为词条例子，连接 AI 即可开始查询。" Style="{StaticResource YiyiBodyLabel}"
-                                                       FontSize="11" TextWrapping="Wrap" />
-                                        </StackPanel>
-                                    </Border>
-                                    <Grid ColumnSpacing="6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*" />
-                                            <ColumnDefinition Width="Auto" />
-                                        </Grid.ColumnDefinitions>
-                                        <Button Style="{StaticResource YiyiGhostButton}" Click="PasteWorkbenchText"
-                                                AutomationProperties.Name="粘贴文本">
-                                            <StackPanel Orientation="Horizontal" Spacing="7">
-                                                <FontIcon Glyph="&#xE77F;" FontSize="14" />
-                                                <TextBlock Text="粘贴文本" />
-                                            </StackPanel>
-                                        </Button>
-                                        <TextBlock x:Name="WorkbenchCharacterCount" Grid.Column="1" Text="0 / 24,000"
-                                                   Style="{StaticResource YiyiCaption}" VerticalAlignment="Center" />
-                                    </Grid>
-                                </StackPanel>
-                                <Border Grid.Row="4" Background="{ThemeResource YiyiBorderBrush}" />
-                                <Grid Grid.Row="5" Padding="15,12,15,14" RowSpacing="8">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="*" />
-                                        <RowDefinition Height="42" />
-                                    </Grid.RowDefinitions>
-                                    <Grid ColumnSpacing="8">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="Auto" />
-                                            <ColumnDefinition Width="*" />
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="翻译风格" Style="{StaticResource YiyiBodyLabel}" FontSize="11" VerticalAlignment="Center" />
-                                        <ComboBox x:Name="TonePicker" Grid.Column="1" Style="{StaticResource YiyiQuietSelect}" Width="82"
-                                                  AutomationProperties.Name="翻译风格" VerticalAlignment="Center" SelectionChanged="PreferencesChanged" />
-                                        <TextBlock Grid.Column="2" Text="Ctrl + Enter" Style="{StaticResource YiyiCaption}" FontFamily="Segoe UI"
-                                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
-                                    </Grid>
-                                    <Button x:Name="TranslateButton" Grid.Row="1" Style="{StaticResource YiyiPrimaryButton}"
-                                            HorizontalAlignment="Stretch" AutomationProperties.Name="开始翻译" Click="Translate">
-                                        <Button.KeyboardAccelerators>
-                                            <KeyboardAccelerator Key="Enter" Modifiers="Control" />
-                                        </Button.KeyboardAccelerators>
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <FontIcon Glyph="&#xE72A;" FontSize="14" />
-                                            <TextBlock x:Name="WorkbenchTranslateCaption" Text="开始翻译" />
-                                        </StackPanel>
-                                    </Button>
-                                    <Button x:Name="CancelButton" Grid.Row="1" Content="停止生成" HorizontalAlignment="Stretch"
-                                            Style="{StaticResource YiyiPrimaryButton}" Click="Cancel" IsEnabled="False" Visibility="Collapsed" />
+                    <Border Style="{StaticResource YiyiCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="44" />
+                                <RowDefinition Height="1" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid Margin="14,0,9,0" ColumnSpacing="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="原文" Style="{StaticResource YiyiBodyLabel}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                <ComboBox x:Name="SourceLanguage" Grid.Column="1" AutomationProperties.Name="原文语言" MinWidth="112"
+                                          Style="{StaticResource YiyiQuietSelect}" VerticalAlignment="Center"
+                                          SelectionChanged="PreferencesChanged" />
+                                <Button x:Name="SwapButton" Grid.Column="2" Style="{StaticResource YiyiGhostButton}" VerticalAlignment="Center"
+                                        ToolTipService.ToolTip="交换语言" AutomationProperties.Name="交换语言" Click="SwapLanguages">
+                                    <FontIcon Glyph="&#xE8AB;" FontSize="14" />
+                                </Button>
+                                <Button x:Name="ScreenshotButton" Grid.Column="4" Style="{StaticResource YiyiGhostButton}" VerticalAlignment="Center"
+                                        AutomationProperties.Name="截图取字" Click="PickScreenshot">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE722;" FontSize="13" />
+                                        <TextBlock Text="截图取字" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="ClearButton" Grid.Column="5" Style="{StaticResource YiyiGhostButton}" VerticalAlignment="Center"
+                                        ToolTipService.ToolTip="清空输入和结果" AutomationProperties.Name="清空输入和结果" Click="Clear">
+                                    <FontIcon Glyph="&#xE711;" FontSize="12" />
+                                </Button>
+                            </Grid>
+                            <Border Grid.Row="1" Background="{ThemeResource YiyiBorderBrush}" />
+                            <TextBox x:Name="SourceText" Grid.Row="2" Margin="15,11,12,4" Style="{StaticResource YiyiEditor}"
+                                     AutomationProperties.Name="原文" AcceptsReturn="True" MaxLength="24000"
+                                     TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     PlaceholderText="输入文字，或粘贴以自动翻译…" TextChanged="WorkbenchTextChanged"
+                                     Paste="WorkbenchPaste" PreviewKeyDown="WorkbenchSourceKeyDown" />
+                            <Grid Grid.Row="3" Padding="8,2,9,8" ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="PasteButton" Style="{StaticResource YiyiGhostButton}" Click="PasteWorkbenchText"
+                                        AutomationProperties.Name="粘贴并翻译">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <FontIcon Glyph="&#xE77F;" FontSize="13" />
+                                        <TextBlock Text="粘贴并翻译" />
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock x:Name="WorkbenchCharacterCount" Grid.Column="2" Text="0 / 24,000"
+                                           Style="{StaticResource YiyiCaption}" VerticalAlignment="Center" />
+                                <Button x:Name="TranslateButton" Grid.Column="3" Style="{StaticResource WorkbenchActionButton}"
+                                        AutomationProperties.Name="开始翻译" ToolTipService.ToolTip="开始翻译（Ctrl + Enter）" Click="Translate">
+                                    <Button.KeyboardAccelerators>
+                                        <KeyboardAccelerator Key="Enter" Modifiers="Control" />
+                                    </Button.KeyboardAccelerators>
+                                    <FontIcon Glyph="&#xE724;" FontSize="15" />
+                                </Button>
+                                <Button x:Name="CancelButton" Grid.Column="3" Style="{StaticResource WorkbenchActionButton}"
+                                        AutomationProperties.Name="停止生成" ToolTipService.ToolTip="停止生成"
+                                        Click="Cancel" IsEnabled="False" Visibility="Collapsed">
+                                    <FontIcon Glyph="&#xE71A;" FontSize="13" />
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                    <Border Grid.Row="1" Style="{StaticResource YiyiCard}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="44" />
+                                <RowDefinition Height="1" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid Margin="14,0,9,0" ColumnSpacing="5">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="WorkbenchResultKind" Text="译文" Style="{StaticResource YiyiBodyLabel}" FontWeight="SemiBold"
+                                           VerticalAlignment="Center" />
+                                <ComboBox x:Name="TargetLanguage" Grid.Column="1" AutomationProperties.Name="目标语言" MinWidth="112"
+                                          Style="{StaticResource YiyiQuietSelect}" VerticalAlignment="Center" SelectionChanged="PreferencesChanged" />
+                                <TextBlock Grid.Column="3" Text="风格" Style="{StaticResource YiyiBodyLabel}" VerticalAlignment="Center" />
+                                <ComboBox x:Name="TonePicker" Grid.Column="4" Style="{StaticResource YiyiQuietSelect}" Width="82"
+                                          AutomationProperties.Name="翻译风格" VerticalAlignment="Center" SelectionChanged="PreferencesChanged" />
+                                <Button x:Name="CopyButton" Grid.Column="5" Style="{StaticResource YiyiGhostButton}" IsEnabled="False"
+                                        VerticalAlignment="Center" ToolTipService.ToolTip="复制完整结果"
+                                        AutomationProperties.Name="复制完整结果" Click="Copy">
+                                    <FontIcon Glyph="&#xE8C8;" FontSize="14" />
+                                </Button>
+                                <Button x:Name="ResultFavorite" Grid.Column="6" Style="{StaticResource YiyiGhostButton}" IsEnabled="False"
+                                        VerticalAlignment="Center" ToolTipService.ToolTip="收藏到生词本"
+                                        AutomationProperties.Name="收藏到生词本" Click="ToggleResultFavorite">
+                                    <FontIcon x:Name="WorkbenchFavoriteIcon" Glyph="&#xE734;" FontSize="14" />
+                                </Button>
+                            </Grid>
+                            <Border Grid.Row="1" Background="{ThemeResource YiyiBorderBrush}" />
+                            <Grid Grid.Row="2">
+                                <TextBox x:Name="ResultText" Margin="15,11,12,8" Style="{StaticResource YiyiEditor}"
+                                         AutomationProperties.Name="译文" IsReadOnly="True" IsTabStop="False" AcceptsReturn="True" TextWrapping="Wrap"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                                <ScrollViewer x:Name="DictionaryScroll" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="DictionaryContent" Spacing="16" Padding="15,12,16,12" />
+                                </ScrollViewer>
+                                <Grid x:Name="WorkbenchResultEmpty" Background="{ThemeResource YiyiSurfaceBrush}" Margin="1,0,1,0">
+                                    <StackPanel x:Name="WorkbenchEmptyExplanation" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4">
+                                        <TextBlock Text="译文和词条会显示在这里" Style="{StaticResource YiyiBodyLabel}" TextAlignment="Center" />
+                                        <Button Content="浏览词条例子" Style="{StaticResource YiyiGhostButton}"
+                                                HorizontalAlignment="Center" Click="LoadWorkbenchExample" />
+                                    </StackPanel>
+                                    <StackPanel x:Name="WorkbenchBusyFeedback" Orientation="Horizontal" HorizontalAlignment="Center"
+                                                VerticalAlignment="Center" Spacing="8" Visibility="Collapsed">
+                                        <ProgressRing x:Name="WorkbenchSpinner" Width="20" Height="20" IsActive="False"
+                                                      Foreground="{ThemeResource YiyiAccentBrush}" />
+                                        <TextBlock Text="正在生成…" Style="{StaticResource YiyiBodyLabel}" VerticalAlignment="Center" />
+                                    </StackPanel>
                                 </Grid>
                             </Grid>
-                        </Border>
-
-                        <Border Grid.Column="1" Style="{StaticResource YiyiCard}">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="57" />
-                                    <RowDefinition Height="1" />
-                                    <RowDefinition Height="*" />
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="1" />
-                                    <RowDefinition Height="36" />
-                                </Grid.RowDefinitions>
-                                <Grid Margin="15,0,12,0" ColumnSpacing="5">
+                            <Border x:Name="WorkbenchResultFooter" Grid.Row="3" Visibility="Collapsed" Padding="14,7"
+                                    BorderBrush="{ThemeResource YiyiBorderBrush}" BorderThickness="0,1,0,0">
+                                <Grid ColumnSpacing="10">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="WorkbenchResultKind" Text="译文" Style="{StaticResource YiyiBodyLabel}" FontSize="11"
-                                               VerticalAlignment="Center" />
-                                    <ComboBox x:Name="TargetLanguage" Grid.Column="1" AutomationProperties.Name="目标语言" MinWidth="104"
-                                              Style="{StaticResource YiyiQuietSelect}" VerticalAlignment="Center" SelectionChanged="PreferencesChanged" />
-                                    <Button x:Name="CopyButton" Grid.Column="3" Style="{StaticResource YiyiGhostButton}" IsEnabled="False"
-                                            ToolTipService.ToolTip="复制完整结果" AutomationProperties.Name="复制完整结果" Click="Copy">
-                                        <FontIcon Glyph="&#xE8C8;" FontSize="14" />
-                                    </Button>
-                                    <Button x:Name="ResultFavorite" Grid.Column="4" Style="{StaticResource YiyiGhostButton}" IsEnabled="False"
-                                            ToolTipService.ToolTip="收藏到生词本" AutomationProperties.Name="收藏到生词本" Click="ToggleResultFavorite">
-                                        <FontIcon x:Name="WorkbenchFavoriteIcon" Glyph="&#xE734;" FontSize="14" />
-                                    </Button>
+                                    <TextBlock x:Name="WorkbenchResultProvider" Style="{StaticResource YiyiCaption}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock x:Name="WorkbenchResultTiming" Grid.Column="1" Style="{StaticResource YiyiCaption}" Visibility="Collapsed" />
+                                    <TextBlock x:Name="WorkbenchStatus" Grid.Column="2" Style="{StaticResource YiyiCaption}" />
                                 </Grid>
-                                <Border Grid.Row="1" Background="{ThemeResource YiyiBorderBrush}" />
-                                <Grid Grid.Row="2">
-                                    <TextBox x:Name="ResultText" Margin="20,16,17,10" Style="{StaticResource YiyiEditor}"
-                                             AutomationProperties.Name="译文" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
-                                             ScrollViewer.VerticalScrollBarVisibility="Auto" />
-                                    <ScrollViewer x:Name="DictionaryScroll" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
-                                        <StackPanel x:Name="DictionaryContent" Spacing="18" Padding="19,19,16,16" />
-                                    </ScrollViewer>
-                                    <Grid x:Name="WorkbenchResultEmpty" Background="{ThemeResource YiyiSurfaceBrush}" Margin="1,0,1,0">
-                                        <StackPanel x:Name="WorkbenchEmptyExplanation" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                    Spacing="12" MaxWidth="270">
-                                            <ContentControl Template="{StaticResource YiyiEmptyIllustration}" Width="144" Height="112"
-                                                            HorizontalAlignment="Center" />
-                                            <TextBlock Text="让理解，在这里发生" Style="{StaticResource YiyiTitle}" FontSize="17"
-                                                       FontWeight="Normal" TextAlignment="Center" />
-                                            <TextBlock Text="输入文字并开始翻译，&#10;你的译文和词条就会出现在这里。" TextWrapping="Wrap"
-                                                       Style="{StaticResource YiyiBodyLabel}" TextAlignment="Center" />
-                                            <Button Content="浏览词条例子" Style="{StaticResource YiyiGhostButton}"
-                                                    HorizontalAlignment="Center" Click="LoadWorkbenchExample" />
-                                        </StackPanel>
-                                        <StackPanel x:Name="WorkbenchBusyFeedback" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                    Spacing="12" Visibility="Collapsed">
-                                            <ProgressRing x:Name="WorkbenchSpinner" Width="26" Height="26" IsActive="False"
-                                                          Foreground="{ThemeResource YiyiAccentBrush}" />
-                                            <TextBlock Text="正在生成…" Style="{StaticResource YiyiBodyLabel}" HorizontalAlignment="Center" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Grid>
-                                <TextBlock x:Name="WorkbenchResultTiming" Grid.Row="3" Margin="18,0,14,7"
-                                           Visibility="Collapsed" Style="{StaticResource YiyiCaption}" />
-                                <Border Grid.Row="4" Background="{ThemeResource YiyiBorderBrush}" />
-                                <Grid Grid.Row="5" Margin="12,0" ColumnSpacing="6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <FontIcon Glyph="&#xE946;" FontSize="11" Foreground="{ThemeResource YiyiMutedBrush}" VerticalAlignment="Center" />
-                                    <TextBlock x:Name="WorkbenchResultProvider" Grid.Column="1" Text="由你选择的 AI 服务提供结果"
-                                               Style="{StaticResource YiyiCaption}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock x:Name="WorkbenchStatus" Grid.Column="2" Style="{StaticResource YiyiCaption}" VerticalAlignment="Center" />
-                                </Grid>
-                            </Grid>
-                        </Border>
-                    </Grid>
-                    <Grid Grid.Row="2" ColumnSpacing="5">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <FontIcon Glyph="&#xE72E;" FontSize="11" Foreground="{ThemeResource YiyiMutedBrush}" />
-                        <TextBlock Grid.Column="1" Text="历史与生词本保存在本机" Style="{StaticResource YiyiCaption}" />
-                        <TextBlock Grid.Column="2" Text="智能识别会根据输入长度，在查词与翻译间自动切换" Style="{StaticResource YiyiCaption}" />
-                    </Grid>
+                            </Border>
+                        </Grid>
+                    </Border>
                 </Grid>
                 <Grid x:Name="LibraryPage" Grid.Row="1" RowSpacing="17" Margin="0,0,0,4" Visibility="Collapsed">
                     <Grid.RowDefinitions>
@@ -525,7 +435,7 @@
                                 <Border Height="1" Background="{ThemeResource YiyiBorderBrush}" />
                                 <StackPanel x:Name="SettingsProviderEmpty" Spacing="9">
                                     <TextBlock Text="连接本地模型或云端服务" FontSize="17" FontWeight="SemiBold" />
-                                    <TextBlock Text="选择预设后填写你的服务地址、模型和凭据。配置完成后，可在工作台切换模型。"
+                                    <TextBlock Text="选择预设并填写服务地址、模型和凭据。"
                                                TextWrapping="Wrap" Style="{StaticResource YiyiBodyLabel}" />
                                     <StackPanel Orientation="Horizontal" Spacing="7">
                                         <Button Content="Ollama" Tag="0" Click="NewProvider" Style="{StaticResource YiyiButton}" />

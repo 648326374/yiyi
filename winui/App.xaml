@@ -27,6 +27,7 @@
                     <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="{StaticResource YiyiSecondaryColor}" />
                     <SolidColorBrush x:Key="YiyiBorderBrush" Color="{StaticResource YiyiBorderColor}" />
                     <SolidColorBrush x:Key="YiyiAccentBrush" Color="{StaticResource YiyiAccentColor}" />
+                    <SolidColorBrush x:Key="YiyiSelectionBrush" Color="{StaticResource YiyiAccentColor}" />
                     <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="{StaticResource YiyiAccentSoftColor}" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Default">
@@ -51,6 +52,7 @@
                     <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="{StaticResource YiyiSecondaryColor}" />
                     <SolidColorBrush x:Key="YiyiBorderBrush" Color="{StaticResource YiyiBorderColor}" />
                     <SolidColorBrush x:Key="YiyiAccentBrush" Color="{StaticResource YiyiAccentColor}" />
+                    <SolidColorBrush x:Key="YiyiSelectionBrush" Color="#3F6C50" />
                     <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="{StaticResource YiyiAccentSoftColor}" />
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="HighContrast">
@@ -75,6 +77,7 @@
                     <SolidColorBrush x:Key="YiyiSecondaryBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="YiyiBorderBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
                     <SolidColorBrush x:Key="YiyiAccentBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                    <SolidColorBrush x:Key="YiyiSelectionBrush" Color="{ThemeResource SystemColorHighlightColor}" />
                     <SolidColorBrush x:Key="YiyiAccentSoftBrush" Color="{ThemeResource SystemColorWindowColor}" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
@@ -162,7 +165,7 @@
                 <Setter Property="FontFamily" Value="Segoe UI, Microsoft YaHei UI" />
                 <Setter Property="FontSize" Value="14" />
                 <Setter Property="Foreground" Value="{ThemeResource YiyiTextBrush}" />
-                <Setter Property="SelectionHighlightColor" Value="{ThemeResource YiyiAccentBrush}" />
+                <Setter Property="SelectionHighlightColor" Value="{ThemeResource YiyiSelectionBrush}" />
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="Padding" Value="0" />

@@ -77,7 +77,6 @@ namespace winrt::Yiyi::WinUI::implementation
                 self->Navigation().SelectedItem(self->TranslateItem());
                 self->Clear(nullptr, nullptr);
                 self->SourceText().Text(source);
-                self->ModeSegments().SelectedIndex(0);
                 self->screenshotTargetChanged(target);
                 if (translate) self->Translate(nullptr, nullptr);
             };
