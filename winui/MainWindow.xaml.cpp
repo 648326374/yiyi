@@ -273,7 +273,6 @@ namespace winrt::Yiyi::WinUI::implementation
         SettingsDataDirectory().Text(L"数据目录：" + hstring(m_dataDirectory.native()));
         Navigation().SelectedItem(TranslateItem());
         updateTheme();
-        LoadWorkbenchExample(nullptr, nullptr);
         m_updating = false;
     }
 
