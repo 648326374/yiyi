@@ -92,6 +92,7 @@ namespace winrt::Yiyi::WinUI::implementation
     private:
         void fillPreferences();
         void refreshProviders();
+        void refreshProviderRows();
         void selectProvider(hstring const& id);
         fire_and_forget showProviderEditor(hstring id, int preset);
         fire_and_forget removeProvider(hstring id);
@@ -102,6 +103,7 @@ namespace winrt::Yiyi::WinUI::implementation
         void notice(hstring const& message, Microsoft::UI::Xaml::Controls::InfoBarSeverity severity =
             Microsoft::UI::Xaml::Controls::InfoBarSeverity::Informational);
         void reportError(hstring const& fallback);
+        ::yiyi::HistoryStore& history();
         void refreshLibrary(int64_t selection = 0);
         ::yiyi::HistoryRecord const* selectedRecord();
         ::yiyi::HistoryRecord const* recordForAction(IInspectable const& sender);

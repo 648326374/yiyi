@@ -383,16 +383,26 @@ namespace winrt::Yiyi::WinUI::implementation
             !std::ranges::equal(services, providers, {}, [](auto const& item) { return unbox_value<hstring>(item); },
                 &::yiyi::Provider::name);
         if (rebuildCombo) services.Clear();
+        int active = -1;
+        for (size_t index = 0; index < providers.size(); ++index) {
+            const auto& item = providers[index];
+            if (rebuildCombo) services.Append(box_value(item.name));
+            if (item.id == m_settings.selectedProviderId) active = static_cast<int>(index);
+        }
+        combo.SelectedIndex(active);
+        m_updating = wasUpdating;
+        refreshProviderRows();
+        updateWorkbenchChrome();
+    }
+
+    void MainWindow::refreshProviderRows()
+    {
+        if (SettingsPage().Visibility() != Visibility::Visible) return;
         auto rows = SettingsProviderRows().Children();
         rows.Clear();
-        int active = -1;
         const auto weak = get_weak();
-        for (size_t index = 0; index < m_settings.providers.size(); ++index) {
-            const auto& item = m_settings.providers[index];
+        for (const auto& item : m_settings.providers) {
             const bool selected = item.id == m_settings.selectedProviderId;
-            if (rebuildCombo) services.Append(box_value(item.name));
-            if (selected) active = static_cast<int>(index);
-
             Grid grid;
             grid.ColumnSpacing(8);
             column(grid, GridUnitType::Auto);
@@ -455,11 +465,8 @@ namespace winrt::Yiyi::WinUI::implementation
             card.Child(grid);
             rows.Append(card);
         }
-        combo.SelectedIndex(active);
         SettingsProviderCount().Text(hstring(std::to_wstring(m_settings.providers.size()) + L" 个配置"));
         SettingsProviderEmpty().Visibility(m_settings.providers.empty() ? Visibility::Visible : Visibility::Collapsed);
-        m_updating = wasUpdating;
-        updateWorkbenchChrome();
     }
 
     void MainWindow::selectProvider(hstring const& id)

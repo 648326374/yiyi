@@ -268,12 +268,6 @@ namespace winrt::Yiyi::WinUI::implementation
         } catch (...) {
             reportError(L"无法读取偏好设置，请检查数据目录。");
         }
-        try {
-            m_history = std::make_unique<::yiyi::HistoryStore>(m_dataDirectory);
-        } catch (...) {
-            reportError(L"无法打开历史记录，请检查数据目录。");
-        }
-
         fillPreferences();
         refreshProviders();
         SettingsDataDirectory().Text(L"数据目录：" + hstring(m_dataDirectory.native()));
@@ -308,14 +302,23 @@ namespace winrt::Yiyi::WinUI::implementation
         else PageSubtitle().Text(L"");
         PageSubtitle().Visibility(PageSubtitle().Text().empty() ? Visibility::Collapsed : Visibility::Visible);
         const bool library = page == L"history" || page == L"favorites";
+        const bool settings = page == L"settings";
+        const bool leavingLibrary = !library && LibraryPage().Visibility() == Visibility::Visible;
+        const bool leavingSettings = !settings && SettingsPage().Visibility() == Visibility::Visible;
         TranslatePage().Visibility(page == L"translate" ? Visibility::Visible : Visibility::Collapsed);
         LibraryPage().Visibility(library ? Visibility::Visible : Visibility::Collapsed);
-        SettingsPage().Visibility(page == L"settings" ? Visibility::Visible : Visibility::Collapsed);
+        SettingsPage().Visibility(settings ? Visibility::Visible : Visibility::Collapsed);
         PdfPage().Visibility(page == L"pdf" ? Visibility::Visible : Visibility::Collapsed);
         DocumentsHost().Visibility(page == L"documents" ? Visibility::Visible : Visibility::Collapsed);
+        if (settings) refreshProviderRows();
+        else if (leavingSettings) SettingsProviderRows().Children().Clear();
         if (page == L"documents") showDocuments();
         if (page == L"pdf") updatePdfTaskUi();
         if (page != L"pdf" && m_pdfReading) setPdfReading(false);
+        if (leavingLibrary) {
+            LibraryList().Items().Clear();
+            std::vector<::yiyi::HistoryRecord>{}.swap(m_library);
+        }
         if (library) {
             m_favoritesOnly = page == L"favorites";
             const auto updating = m_updating;
@@ -334,7 +337,7 @@ namespace winrt::Yiyi::WinUI::implementation
         ::yiyi::saveSettings(m_dataDirectory, next);
         m_settings = std::move(next);
         refreshDocuments();
-        updatePdfTaskUi();
+        if (PdfPage().Visibility() == Visibility::Visible) updatePdfTaskUi();
     }
 
     void MainWindow::PreferencesChanged(IInspectable const&, SelectionChangedEventArgs const&)
@@ -559,13 +562,11 @@ namespace winrt::Yiyi::WinUI::implementation
                 ResultText().Text(record.output);
                 m_workbenchTiming = L"用时 " + durationText(started, std::chrono::steady_clock::now());
                 Status().IsOpen(false);
-                if (m_history) {
-                    try {
-                        m_resultId = m_history->add(record);
-                        if (LibraryPage().Visibility() == Visibility::Visible) refreshLibrary();
-                    } catch (...) {
-                        reportError(L"已生成译文，但无法保存历史记录。");
-                    }
+                try {
+                    m_resultId = history().add(record);
+                    refreshLibrary();
+                } catch (...) {
+                    reportError(L"已生成译文，但无法保存历史记录。");
                 }
             }
         } catch (hresult_canceled const&) {
@@ -671,13 +672,20 @@ namespace winrt::Yiyi::WinUI::implementation
         }
     }
 
+    ::yiyi::HistoryStore& MainWindow::history()
+    {
+        if (!m_history) m_history = std::make_unique<::yiyi::HistoryStore>(m_dataDirectory);
+        return *m_history;
+    }
+
     void MainWindow::refreshLibrary(int64_t selection)
     {
-        if (!m_history) return;
+        if (LibraryPage().Visibility() != Visibility::Visible) return;
         try {
+            auto& store = history();
             const auto query = trimmed(LibrarySearch().Text());
-            m_library = m_history->list(m_favoritesOnly, query);
-            LibraryRecordCount().Text(hstring(std::to_wstring(m_history->count(m_favoritesOnly)) + L" 条记录"));
+            m_library = store.list(m_favoritesOnly, query);
+            LibraryRecordCount().Text(hstring(std::to_wstring(store.count(m_favoritesOnly)) + L" 条记录"));
             LibraryList().Items().Clear();
             int selected = -1;
             for (size_t i = 0; i < m_library.size(); ++i) {
@@ -838,7 +846,7 @@ namespace winrt::Yiyi::WinUI::implementation
                 m_resultIsFavorite = favorite;
                 updateResultActions();
             }
-            if (LibraryPage().Visibility() == Visibility::Visible) refreshLibrary(id);
+            refreshLibrary(id);
         } catch (...) {
             reportError(L"无法更新收藏。");
         }

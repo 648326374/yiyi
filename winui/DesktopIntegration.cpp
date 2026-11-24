@@ -902,28 +902,30 @@ bool DesktopIntegration::State::initializeBubbleDrawing()
 {
     if (bubbleTarget) return true;
     ComPtr<ID2D1Factory> graphics;
-    ComPtr<IDWriteFactory> text;
-    if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, graphics.GetAddressOf())) ||
-        FAILED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
-                                  reinterpret_cast<IUnknown**>(text.GetAddressOf())))) return false;
+    if (FAILED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, graphics.GetAddressOf()))) return false;
 
     ComPtr<ID2D1DCRenderTarget> target;
-    const auto properties = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT,
+    const auto properties = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_SOFTWARE,
         D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
     if (FAILED(graphics->CreateDCRenderTarget(&properties, target.GetAddressOf()))) return false;
     target->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
 
-    ComPtr<IDWriteTextFormat> icon, label;
-    if (FAILED(text->CreateTextFormat(L"Segoe MDL2 Assets", nullptr, DWRITE_FONT_WEIGHT_NORMAL,
-            DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 16.0f, L"zh-CN", icon.GetAddressOf())) ||
-        FAILED(text->CreateTextFormat(L"Microsoft YaHei UI", nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD,
-            DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13.0f, L"zh-CN", label.GetAddressOf()))) return false;
-    icon->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
-    icon->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-    label->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-    label->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
-    bubbleIconFormat = std::move(icon);
-    bubbleLabelFormat = std::move(label);
+    if (!bubbleLabelFormat) {
+        ComPtr<IDWriteFactory> text;
+        if (FAILED(DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory),
+                                      reinterpret_cast<IUnknown**>(text.GetAddressOf())))) return false;
+        ComPtr<IDWriteTextFormat> icon, label;
+        if (FAILED(text->CreateTextFormat(L"Segoe MDL2 Assets", nullptr, DWRITE_FONT_WEIGHT_NORMAL,
+                DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 16.0f, L"zh-CN", icon.GetAddressOf())) ||
+            FAILED(text->CreateTextFormat(L"Microsoft YaHei UI", nullptr, DWRITE_FONT_WEIGHT_SEMI_BOLD,
+                DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 13.0f, L"zh-CN", label.GetAddressOf()))) return false;
+        icon->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+        icon->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+        label->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+        label->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);
+        bubbleIconFormat = std::move(icon);
+        bubbleLabelFormat = std::move(label);
+    }
     bubbleTarget = std::move(target);
     return true;
 }
@@ -994,6 +996,7 @@ void DesktopIntegration::State::dismissBubble()
 {
     if (broker) KillTimer(broker, bubbleTimer);
     if (bubble) ShowWindow(bubble, SW_HIDE);
+    bubbleTarget.Reset();
     bubbleHovered = false;
     bubbleSource = nullptr;
     bubbleText.clear();
