@@ -12,6 +12,7 @@
 #include <bcrypt.h>
 #include <wincodec.h>
 #include <fpdfview.h>
+#include <fpdf_doc.h>
 #include <fpdf_edit.h>
 #include <fpdf_text.h>
 #include <fpdf_ppo.h>
@@ -30,6 +31,7 @@
 #include <memory>
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace yiyi::pdf {
@@ -91,7 +93,10 @@ std::filesystem::path pathArgument(JsonObject const& arguments, hstring const& n
     X(FPDF_InitLibrary) X(FPDF_DestroyLibrary) X(FPDF_LoadMemDocument64) X(FPDF_CloseDocument) \
     X(FPDF_GetPageCount) X(FPDF_LoadPage) X(FPDF_ClosePage) X(FPDF_GetPageWidthF) X(FPDF_GetPageHeightF) \
     X(FPDFBitmap_CreateEx) X(FPDFBitmap_Destroy) X(FPDF_RenderPageBitmap) \
-    X(FPDFPage_GetRotation) X(FPDFPage_GetMediaBox) X(FPDFPage_GetCropBox) X(FPDF_DeviceToPage) \
+    X(FPDFPage_GetRotation) X(FPDFPage_GetMediaBox) X(FPDFPage_GetCropBox) X(FPDF_DeviceToPage) X(FPDF_PageToDevice) \
+    X(FPDFBookmark_GetFirstChild) X(FPDFBookmark_GetNextSibling) X(FPDFBookmark_GetTitle) X(FPDFBookmark_GetDest) \
+    X(FPDFBookmark_GetAction) X(FPDFAction_GetType) X(FPDFAction_GetDest) X(FPDF_CountNamedDests) X(FPDF_GetNamedDest) \
+    X(FPDFDest_GetDestPageIndex) X(FPDFDest_GetLocationInPage) \
     X(FPDFPage_CountObjects) X(FPDFPage_GetObject) X(FPDFPageObj_GetType) X(FPDFPageObj_GetBounds) \
     X(FPDFPageObj_GetMatrix) X(FPDFFormObj_CountObjects) X(FPDFFormObj_GetObject) X(FPDFFormObj_RemoveObject) \
     X(FPDFPageObj_GetFillColor) X(FPDFPageObj_SetFillColor) X(FPDFPageObj_GetStrokeColor) X(FPDFPageObj_SetStrokeColor) \
@@ -310,6 +315,86 @@ public:
     Page(Page const&) = delete;
     Page& operator=(Page const&) = delete;
 };
+
+int officeBookmarkId(std::wstring_view name, std::wstring_view prefix)
+{
+    if (!name.starts_with(prefix)) return 0;
+    name.remove_prefix(prefix.size());
+    if (name.empty() || name.size() > 9) return 0;
+    int id = 0;
+    for (const auto c : name) {
+        if (c < L'0' || c > L'9') return 0;
+        id = id * 10 + c - L'0';
+    }
+    return id;
+}
+
+JsonArray officeBookmarks(Document& document, std::wstring_view prefix)
+{
+    auto& api = document.api;
+    const auto pdf = document.handle;
+    std::unordered_map<int, std::vector<std::pair<int, FPDF_DEST>>> byPage;
+    const auto add = [&](int id, FPDF_DEST destination) {
+        if (!id || !destination) return;
+        const auto page = api.FPDFDest_GetDestPageIndex(pdf, destination);
+        if (page >= 0 && page < document.pageCount) byPage[page].emplace_back(id, destination);
+    };
+
+    // Word exports bookmarks in the PDF outline. LibreOffice exports named destinations.
+    std::array<wchar_t, 41> name{};
+    std::vector<FPDF_BOOKMARK> pending{api.FPDFBookmark_GetFirstChild(pdf, nullptr)};
+    std::unordered_set<FPDF_BOOKMARK> visited;
+    while (!pending.empty()) {
+        const auto bookmark = pending.back();
+        pending.pop_back();
+        if (!bookmark || !visited.insert(bookmark).second) continue;
+        if (const auto next = api.FPDFBookmark_GetNextSibling(pdf, bookmark)) pending.push_back(next);
+        if (const auto child = api.FPDFBookmark_GetFirstChild(pdf, bookmark)) pending.push_back(child);
+        const auto bytes = api.FPDFBookmark_GetTitle(bookmark, name.data(), sizeof(name));
+        if (bytes < sizeof(wchar_t) || bytes > sizeof(name)) continue;
+        const int id = officeBookmarkId({name.data(), bytes / sizeof(wchar_t) - 1}, prefix);
+        if (!id) continue;
+        auto destination = api.FPDFBookmark_GetDest(pdf, bookmark);
+        if (!destination) {
+            const auto action = api.FPDFBookmark_GetAction(bookmark);
+            if (action && api.FPDFAction_GetType(action) == PDFACTION_GOTO) destination = api.FPDFAction_GetDest(pdf, action);
+        }
+        add(id, destination);
+    }
+    if (byPage.empty()) {
+        const int count = static_cast<int>(std::min<FPDF_DWORD>(api.FPDF_CountNamedDests(pdf), (std::numeric_limits<int>::max)()));
+        for (int index = 0; index < count; ++index) {
+            long bytes = static_cast<long>(sizeof(name));
+            const auto destination = api.FPDF_GetNamedDest(pdf, index, name.data(), &bytes);
+            if (!destination || bytes < static_cast<long>(sizeof(wchar_t)) || bytes > static_cast<long>(sizeof(name))) continue;
+            add(officeBookmarkId({name.data(), static_cast<size_t>(bytes) / sizeof(wchar_t) - 1}, prefix), destination);
+        }
+    }
+
+    JsonArray result;
+    constexpr int units = 1'000'000;
+    for (const auto& [index, destinations] : byPage) {
+        const auto close = api.FPDF_ClosePage;
+        std::unique_ptr<std::remove_pointer_t<FPDF_PAGE>, decltype(close)> page(api.FPDF_LoadPage(pdf, index), close);
+        if (!page) continue;
+        const bool sideways = api.FPDFPage_GetRotation(page.get()) % 2 != 0;
+        for (const auto& [id, destination] : destinations) {
+            FPDF_BOOL hasX{}, hasY{}, hasZoom{};
+            FS_FLOAT x{}, y{}, zoom{};
+            if (!api.FPDFDest_GetLocationInPage(destination, &hasX, &hasY, &hasZoom, &x, &y, &zoom) ||
+                !hasY || (sideways && !hasX) || !std::isfinite(x) || !std::isfinite(y)) continue;
+            int deviceX{}, deviceY{};
+            if (!api.FPDF_PageToDevice(page.get(), 0, 0, units, units, 0, x, y, &deviceX, &deviceY) ||
+                deviceY < 0 || deviceY > units) continue;
+            JsonObject bookmark;
+            putNumber(bookmark, L"id", id);
+            putNumber(bookmark, L"page", index);
+            putNumber(bookmark, L"top", static_cast<double>(deviceY) / units);
+            result.Append(bookmark);
+        }
+    }
+    return result;
+}
 
 struct Transform {
     double a = 1, b = 0, c = 0, d = 1, e = 0, f = 0;
@@ -1211,6 +1296,8 @@ JsonObject executeDocumentRequest(JsonObject const& request, std::filesystem::pa
         putNumber(result, L"pageCount", doc.pageCount);
         putText(result, L"hash", doc.hash);
         result.Insert(L"stamp", doc.stamp);
+        const auto prefix = request.GetNamedString(L"officeBookmarkPrefix", L"");
+        if (!prefix.empty()) result.Insert(L"officeBookmarks", officeBookmarks(doc, prefix));
         return result;
     }
 

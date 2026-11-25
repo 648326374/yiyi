@@ -134,7 +134,9 @@ void renderDocument(IDispatch& documents, std::filesystem::path const& input)
     auto document = dispatch(invoke(documents, L"Open", DISPATCH_METHOD,
         {input.c_str(), false, true, false, missing, missing, missing, missing, missing, missing, missing, false}));
     constexpr long pdf = 17; // wdExportFormatPDF
-    invoke(*document.Get(), L"ExportAsFixedFormat", DISPATCH_METHOD, {output.c_str(), pdf, false});
+    constexpr long wordBookmarks = 2; // wdExportCreateWordBookmarks
+    invoke(*document.Get(), L"ExportAsFixedFormat", DISPATCH_METHOD,
+        {output.c_str(), pdf, false, missing, missing, missing, missing, missing, missing, missing, wordBookmarks});
     invoke(*document.Get(), L"Close", DISPATCH_METHOD, {0L});
 }
 

@@ -10,8 +10,11 @@ int wmain(int argc, wchar_t const* argv[])
     if (!profile.starts_with(L"-env:UserInstallation=file:///") || !profile.ends_with(L"/profile")
         || profile.find(L"%23") == profile.npos || profile.find(L"%25") == profile.npos)
         return 2;
+    const std::wstring_view filter = argc == 9
+        ? LR"(pdf:writer_pdf_Export:{"ExportBookmarksToPDFDestination":{"type":"boolean","value":"true"}})"
+        : L"pdf";
     if (std::wstring_view(argv[2]) != L"--headless" || std::wstring_view(argv[3]) != L"--convert-to"
-        || std::wstring_view(argv[4]) != L"pdf" || std::wstring_view(argv[5]) != L"--outdir")
+        || std::wstring_view(argv[4]) != filter || std::wstring_view(argv[5]) != L"--outdir")
         return 3;
     const std::filesystem::path output(argv[6]);
     if (std::filesystem::exists(std::filesystem::path(argv[0]).parent_path() / L"hold-preview"))

@@ -14,13 +14,14 @@ def make_pdf(path):
     first = b"1 0 0 rg 0 0 200 150 re f BT /F1 12 Tf 12 130 Td (First page) Tj ET"
     second = b"0 0 1 rg 0 0 300 200 re f BT /F1 16 Tf 18 180 Td (Second page) Tj ET"
     objects = [
-        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Catalog /Pages 2 0 R /Names << /Dests 8 0 R >> >>",
         b"<< /Type /Pages /Count 2 /Kids [3 0 R 4 0 R] >>",
         b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 150] /Resources << /Font << /F1 7 0 R >> >> /Contents 5 0 R >>",
         b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 200] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>",
         b"<< /Length %d >>\nstream\n%s\nendstream" % (len(first), first),
         b"<< /Length %d >>\nstream\n%s\nendstream" % (len(second), second),
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        b"<< /Names [(YiyiTest_1) [3 0 R /XYZ 12 120 0] (YiyiTest_2) [4 0 R /XYZ 18 120 0]] >>",
     ]
     data = bytearray(b"%PDF-1.4\n")
     offsets = [0]
@@ -67,6 +68,14 @@ def main(executable, output_root, task_smoke):
         assert info["stamp"]["size"] == len(original)
         assert info["stamp"]["path"].endswith("/原始 文件.pdf")
         assert progress == [{"stage": "fingerprint", "completed": len(original), "total": len(original)}]
+        assert "officeBookmarks" not in info
+        with_bookmarks, _ = run("info", officeBookmarkPrefix="YiyiTest_")
+        assert sorted(with_bookmarks["officeBookmarks"], key=lambda bookmark: bookmark["id"]) == [
+            {"id": 1, "page": 0, "top": 0.2},
+            {"id": 2, "page": 1, "top": 0.4},
+        ]
+        missing_bookmarks, _ = run("info", officeBookmarkPrefix="Missing_")
+        assert missing_bookmarks["officeBookmarks"] == []
 
         database = root / "原有 PDF 任务.sqlite"
         with contextlib.closing(sqlite3.connect(database)) as db:

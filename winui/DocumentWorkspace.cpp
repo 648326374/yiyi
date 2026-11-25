@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <shlobj.h>
 #include <shobjidl_core.h>
+#undef GetObject
 #include <winrt/Microsoft.UI.Xaml.Automation.h>
 #include <winrt/Microsoft.UI.Xaml.Controls.Primitives.h>
 #include <winrt/Microsoft.UI.Xaml.Markup.h>
@@ -19,6 +20,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cmath>
 #include <cstring>
 #include <utility>
 
@@ -44,6 +46,13 @@ constexpr std::array<std::wstring_view, 4> tones = {L"自然", L"正式", L"口�
 constexpr std::array<DocumentEncoding, 5> encodings = {
     DocumentEncoding::Auto, DocumentEncoding::Utf8, DocumentEncoding::Gb18030, DocumentEncoding::Utf16Le, DocumentEncoding::Utf16Be
 };
+constexpr std::array<double, 5> officeZoom = {1.0, 1.0, 1.25, 1.5, 2.0};
+constexpr double previewPaperInset = 9;
+
+double previewReadingLine(ScrollViewer const& viewer)
+{
+    return viewer.ViewportHeight() * 0.15;
+}
 
 class BusyFlag {
 public:
@@ -160,6 +169,17 @@ void buttonText(Button const& control, hstring const& text, std::wstring_view gl
     caption.Text(text);
     content.Children().Append(caption);
     control.Content(content);
+}
+
+void buttonIcon(Button const& control, hstring const& name, hstring const& glyph)
+{
+    if (AutomationProperties::GetName(control) == name && control.Content().try_as<FontIcon>()) return;
+    FontIcon icon;
+    icon.Glyph(glyph);
+    icon.FontSize(15);
+    AutomationProperties::SetName(control, name);
+    ToolTipService::SetToolTip(control, box_value(name));
+    control.Content(icon);
 }
 
 template <typename Handler>
@@ -381,8 +401,6 @@ void DocumentWorkspace::build()
 Grid DocumentWorkspace::preferenceBar(Preferences& preferences, StackPanel const& providerPanel)
 {
     Grid rowContent;
-    column(rowContent);
-    column(rowContent, GridUnitType::Auto);
     const bool isOffice = &preferences == &m_officeSettings;
     auto languagesPanel = stack();
     languagesPanel.Spacing(6);
@@ -412,7 +430,12 @@ Grid DocumentWorkspace::preferenceBar(Preferences& preferences, StackPanel const
         ToolTipService::SetToolTip(settings, box_value(hstring(L"管理 AI 服务")));
     }
     place(rowContent, languagesPanel, 0);
-    if (isOffice) place(rowContent, providerPanel, 0, 1);
+    if (isOffice) {
+        row(rowContent);
+        row(rowContent);
+        rowContent.RowSpacing(8);
+        place(rowContent, providerPanel, 1);
+    }
     return rowContent;
 }
 
@@ -444,6 +467,9 @@ void DocumentWorkspace::buildText()
     m_txtInfo = InfoBar{};
     m_txtInfo.IsClosable(true);
     place(m_textPage, m_txtInfo, 1);
+    column(languageBar);
+    column(languageBar, GridUnitType::Auto);
+    languageBar.ColumnSpacing(12);
     m_txtCount = label(L"", 10);
     place(languageBar, m_txtCount, 0, 1);
     place(m_textPage, languageBar, 2);
@@ -488,74 +514,138 @@ void DocumentWorkspace::buildText()
 
 void DocumentWorkspace::buildOffice()
 {
+    const auto weak = weak_from_this();
+    const auto openDocument = [weak] { if (const auto self = weak.lock()) self->pick(true); };
     m_officePage = Grid{};
     m_officePage.RowSpacing(8);
-    for (const auto size : {GridUnitType::Auto, GridUnitType::Auto, GridUnitType::Auto, GridUnitType::Star,
-                            GridUnitType::Auto, GridUnitType::Auto})
+    for (const auto size : {GridUnitType::Auto, GridUnitType::Auto, GridUnitType::Star})
         row(m_officePage, size);
+
+    m_officeEmpty = StackPanel{};
+    m_officeEmpty.Spacing(8);
+    m_officeEmpty.HorizontalAlignment(HorizontalAlignment::Center);
+    m_officeEmpty.VerticalAlignment(VerticalAlignment::Center);
+    m_officeImport = button(m_officeEmpty, L"打开文档", openDocument, L"YiyiPrimaryButton", L"\uE8A5");
+    m_officeImport.MinHeight(42);
+    m_officeImport.HorizontalAlignment(HorizontalAlignment::Center);
+    auto dropHint = label(L"或拖入 DOCX / PPTX", 12);
+    dropHint.HorizontalAlignment(HorizontalAlignment::Center);
+    m_officeEmpty.Children().Append(dropHint);
+    place(m_officePage, m_officeEmpty, 2);
+
+    m_officeControls = StackPanel{};
+    m_officeControls.Spacing(8);
     Grid header;
     header.ColumnSpacing(12);
     column(header, GridUnitType::Auto);
     column(header);
     column(header, GridUnitType::Auto);
-    m_officeViews = stack();
-    m_officeViews.Spacing(2);
-    m_wholePageView = button(m_officeViews, L"整页预览", [weak = weak_from_this()] {
-        if (const auto self = weak.lock()) self->showOfficePreview(true);
-    }, L"YiyiGhostButton");
-    m_paragraphView = button(m_officeViews, L"逐段校对", [weak = weak_from_this()] {
-        if (const auto self = weak.lock()) self->showOfficePreview(false);
-    }, L"YiyiSelectedThemeButton");
-    m_officeViews.Visibility(Visibility::Collapsed);
-    place(header, m_officeViews, 0);
+    auto file = stack();
+    m_officeOpen = button(file, L"更换文档", openDocument, L"YiyiSoftButton", L"\uE8A5");
+    ToolTipService::SetToolTip(m_officeOpen, box_value(hstring(L"打开或拖入 Word / PPT 文件")));
+    place(header, file, 0);
     m_docName = label(L"", 12);
     place(header, m_docName, 0, 1);
     auto top = stack();
-    top.VerticalAlignment(VerticalAlignment::Center);
-    m_officeOpen = button(top, L"打开文档", [weak = weak_from_this()] { if (const auto self = weak.lock()) self->pick(true); },
-                          L"YiyiSoftButton", L"\uE8A5");
-    ToolTipService::SetToolTip(m_officeOpen, box_value(hstring(L"打开或拖入 Word / PPT 文件")));
-    m_officeImages = button(top, L"图片取字", call(weak_from_this(), &DocumentWorkspace::showImages), L"YiyiButton", L"\uE722");
+    top.Spacing(4);
+    m_officePreferences = Button{};
+    m_officePreferences.Style(style(L"YiyiGhostButton"));
+    m_officePreferences.MinHeight(34);
+    buttonText(m_officePreferences, L"翻译设置");
+    m_officePreferencesFlyout = Flyout{};
+    m_officePreferencesFlyout.Content(preferenceBar(m_officeSettings, stack()));
+    m_officePreferences.Flyout(m_officePreferencesFlyout);
+    top.Children().Append(m_officePreferences);
     m_officeOptions = Button{};
     m_officeOptions.Style(style(L"YiyiGhostButton"));
     m_officeOptions.MinHeight(34);
     m_officeOptions.MinWidth(34);
-    FontIcon optionsIcon;
-    optionsIcon.Glyph(L"\uE713");
-    optionsIcon.FontSize(15);
-    m_officeOptions.Content(optionsIcon);
-    AutomationProperties::SetName(m_officeOptions, L"文档与版式选项");
-    ToolTipService::SetToolTip(m_officeOptions, box_value(hstring(L"文档与版式选项")));
+    buttonIcon(m_officeOptions, L"更多文档操作", L"\uE712");
     MenuFlyout menu;
-    const auto action = [&](hstring const& name, auto method) {
+    const auto action = [&](hstring const& name, auto handler) {
         MenuFlyoutItem item;
         item.Text(name);
-        item.Click([invoke = call(weak_from_this(), method)](auto const&, auto const&) { invoke(); });
+        item.Click([handler](auto const&, auto const&) { handler(); });
         menu.Items().Append(item);
         return item;
     };
-    m_fitOptions = action(L"PPT 字号设置", &DocumentWorkspace::configureOffice);
-    action(L"选择 LibreOffice", &DocumentWorkspace::selectRenderer);
-    action(L"生成 PDF 版式预览", &DocumentWorkspace::generateLayoutPreview);
-    m_previewOpen = action(L"打开版式预览", &DocumentWorkspace::openLayoutPreview);
+    m_officeImages = action(L"图片取字", call(weak, &DocumentWorkspace::showImages));
+    m_officeRetranslate = action(L"重新翻译", [weak] { if (const auto self = weak.lock()) self->translateOffice(); });
+    m_officeReset = action(L"清除译文", call(weak, &DocumentWorkspace::resetOffice));
     menu.Items().Append(MenuFlyoutSeparator{});
-    m_officeReset = action(L"清除译文", &DocumentWorkspace::resetOffice);
+    m_fitOptions = action(L"PPT 字号设置", call(weak, &DocumentWorkspace::configureOffice));
+    action(L"选择 LibreOffice", call(weak, &DocumentWorkspace::selectRenderer));
+    m_pptPreview = action(L"生成 PDF 版式预览", call(weak, &DocumentWorkspace::generateLayoutPreview));
+    m_previewOpen = action(L"打开版式预览", call(weak, &DocumentWorkspace::openLayoutPreview));
     if (m_host.openSettings) {
-        MenuFlyoutItem settings;
-        settings.Text(L"管理 AI 服务");
-        settings.Click([weak = weak_from_this()](auto const&, auto const&) {
+        action(L"管理 AI 服务", [weak] {
             if (const auto self = weak.lock(); self && !self->m_closed) self->m_host.openSettings();
         });
-        menu.Items().Append(settings);
     }
     m_officeOptions.Flyout(menu);
     top.Children().Append(m_officeOptions);
     place(header, top, 0, 2);
-    place(m_officePage, header, 0);
-    place(m_officePage, preferenceBar(m_officeSettings, stack()), 1);
+    m_officeControls.Children().Append(header);
+
+    Grid toolbar;
+    toolbar.ColumnSpacing(8);
+    column(toolbar, GridUnitType::Auto);
+    column(toolbar);
+    column(toolbar, GridUnitType::Auto);
+    auto tools = stack();
+    tools.Spacing(6);
+    m_officeViews = stack();
+    m_officeViews.Spacing(2);
+    m_wholePageView = button(m_officeViews, L"整页预览", [weak] {
+        if (const auto self = weak.lock()) self->showOfficePreview(true);
+    }, L"YiyiGhostButton");
+    m_paragraphView = button(m_officeViews, L"逐段校对", [weak] {
+        if (const auto self = weak.lock()) self->showOfficePreview(false);
+    }, L"YiyiSelectedThemeButton");
+    tools.Children().Append(m_officeViews);
+    m_previewTools = stack();
+    m_previewTools.Spacing(6);
+    m_previewLink = combo(m_previewTools, L"翻页方式", 116);
+    m_previewLink.Items().Append(box_value(hstring(L"内容联动")));
+    m_previewLink.Items().Append(box_value(hstring(L"独立翻页")));
+    m_previewLink.SelectionChanged([weak](auto const&, auto const&) {
+        const auto self = weak.lock();
+        if (!self || self->m_closed || self->m_updatingOfficeLinks) return;
+        self->m_linkOfficePages = self->m_previewLink.SelectedIndex() == 0;
+        if (self->m_linkOfficePages) self->followOfficePage(self->m_activeOfficePane);
+    });
+    m_previewZoom = combo(m_previewTools, L"预览缩放", 116);
+    for (const auto* name : {L"适合栏宽", L"适合整页", L"125%", L"150%", L"200%"})
+        m_previewZoom.Items().Append(box_value(hstring(name)));
+    m_previewZoom.SelectedIndex(0);
+    m_previewZoom.SelectionChanged([weak](auto const&, auto const&) {
+        if (const auto self = weak.lock()) self->fitOfficePages();
+    });
+    m_refreshPreview = button(m_previewTools, L"刷新预览", [weak] {
+        if (const auto self = weak.lock()) {
+            if (self->m_previewCancel) self->cancelOfficePreview();
+            else self->generateLayoutPreview();
+        }
+    }, L"YiyiGhostButton");
+    m_refreshPreview.Width(34);
+    m_refreshPreview.Padding({0, 0, 0, 0});
+    tools.Children().Append(m_previewTools);
+    place(toolbar, tools, 0);
+    m_docStatus = label(L"", 11);
+    m_docStatus.TextAlignment(TextAlignment::Right);
+    place(toolbar, m_docStatus, 0, 1);
+    auto actions = stack();
+    actions.Spacing(6);
+    m_officeSave = button(actions, L"另存译文", [weak] { if (const auto self = weak.lock()) self->save(true); },
+                          L"YiyiButton", L"\uE896");
+    m_officeTranslate = button(actions, L"开始翻译", [weak] { if (const auto self = weak.lock()) self->translateOffice(); },
+                               L"YiyiPrimaryButton", L"\uE72A");
+    place(toolbar, actions, 0, 2);
+    m_officeControls.Children().Append(toolbar);
+    place(m_officePage, m_officeControls, 0);
     m_docInfo = InfoBar{};
     m_docInfo.IsClosable(true);
-    place(m_officePage, m_docInfo, 2);
+    place(m_officePage, m_docInfo, 1);
 
     Grid readers;
     readers.ColumnSpacing(10);
@@ -594,7 +684,7 @@ void DocumentWorkspace::buildOffice()
     row(editors);
     m_docLocation = label(L"选择段落查看原文与译文", 11);
     place(editors, m_docLocation, 0);
-    m_docSource = textBox(L"原文", L"打开或拖入 DOCX / PPTX 文档", true);
+    m_docSource = textBox(L"原文", L"", true);
     m_docResult = textBox(L"译文校对", L"开始翻译后显示译文，也可自行填写", false);
     m_docResult.TextChanged([weak = weak_from_this()](auto const&, auto const&) {
         if (const auto self = weak.lock(); self && !self->m_updating && !self->m_closed) self->editDraft();
@@ -622,33 +712,9 @@ void DocumentWorkspace::buildOffice()
     place(editors, checkRow, 3);
     place(readers, editors, 0, 1);
     m_officeParagraphs = readers;
-    place(m_officePage, readers, 3);
+    place(m_officePage, readers, 2);
     buildPagePreview();
-    place(m_officePage, m_officeLayout, 3);
-    m_docProgress = ProgressBar{};
-    AutomationProperties::SetName(m_docProgress, L"Word / PPT 翻译进度");
-    place(m_officePage, m_docProgress, 4);
-
-    Grid footer;
-    footer.ColumnSpacing(10);
-    column(footer);
-    column(footer, GridUnitType::Auto);
-    StackPanel status;
-    status.Spacing(3);
-    status.VerticalAlignment(VerticalAlignment::Center);
-    m_docStatus = label(L"", 11);
-    m_docTask = label(L"", 10);
-    status.Children().Append(m_docStatus);
-    status.Children().Append(m_docTask);
-    place(footer, status, 0);
-    m_officeFooter = footer;
-    m_officeActions = stack();
-    m_officeSave = button(m_officeActions, L"另存译文", [weak = weak_from_this()] { if (const auto self = weak.lock()) self->save(true); },
-                          L"YiyiButton", L"\uE896");
-    m_officeTranslate = button(m_officeActions, L"开始翻译", [weak = weak_from_this()] { if (const auto self = weak.lock()) self->translateOffice(); },
-                               L"YiyiPrimaryButton", L"\uE72A");
-    place(footer, m_officeActions, 0, 1);
-    place(m_officePage, footer, 5);
+    place(m_officePage, m_officeLayout, 2);
 }
 
 void DocumentWorkspace::buildPagePreview()
@@ -656,31 +722,6 @@ void DocumentWorkspace::buildPagePreview()
     const auto weak = weak_from_this();
     m_officeLayout = Grid{};
     m_officeLayout.Visibility(Visibility::Collapsed);
-    m_officeLayout.RowSpacing(7);
-    row(m_officeLayout);
-    row(m_officeLayout, GridUnitType::Star);
-
-    Grid tools;
-    column(tools);
-    column(tools, GridUnitType::Auto);
-    m_previewStatus = label(L"", 11);
-    place(tools, m_previewStatus, 0);
-    m_layoutActions = stack();
-    m_previewZoom = combo(m_layoutActions, L"预览缩放", 114);
-    for (const auto* name : {L"适合栏宽", L"适合整页", L"125%", L"150%", L"200%"})
-        m_previewZoom.Items().Append(box_value(hstring(name)));
-    m_previewZoom.SelectedIndex(0);
-    m_previewZoom.SelectionChanged([weak](auto const&, auto const&) {
-        if (const auto self = weak.lock()) self->fitOfficePages();
-    });
-    m_refreshPreview = button(m_layoutActions, L"刷新预览", [weak] {
-        if (const auto self = weak.lock()) {
-            if (self->m_previewCancel) self->cancelOfficePreview();
-            else self->generateLayoutPreview();
-        }
-    }, L"YiyiGhostButton");
-    place(tools, m_layoutActions, 0, 1);
-    place(m_officeLayout, tools, 0);
 
     Grid columns;
     columns.ColumnSpacing(10);
@@ -714,18 +755,30 @@ void DocumentWorkspace::buildPagePreview()
 
         Grid page;
         pane.viewer = ScrollViewer{};
+        pane.viewer.Style(style(L"YiyiOfficePreviewViewport"));
         pane.viewer.HorizontalScrollMode(ScrollMode::Enabled);
         pane.viewer.HorizontalScrollBarVisibility(ScrollBarVisibility::Auto);
         pane.viewer.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
         pane.viewer.HorizontalContentAlignment(HorizontalAlignment::Center);
+        AutomationProperties::SetName(pane.viewer, name + L"页面");
         pane.image = Image{};
         pane.image.Stretch(Media::Stretch::Uniform);
-        pane.image.VerticalAlignment(VerticalAlignment::Top);
-        pane.image.Margin({5, 5, 5, 5});
         AutomationProperties::SetName(pane.image, name + L"整页预览");
-        pane.viewer.Content(pane.image);
-        pane.viewer.SizeChanged([weak](auto const&, auto const&) {
-            if (const auto self = weak.lock()) self->fitOfficePages();
+        pane.paper = Border{};
+        pane.paper.Style(style(L"YiyiOfficePreviewPaper"));
+        pane.paper.VerticalAlignment(VerticalAlignment::Top);
+        pane.paper.HorizontalAlignment(HorizontalAlignment::Center);
+        pane.paper.Visibility(Visibility::Collapsed);
+        pane.paper.Child(pane.image);
+        pane.viewer.Content(pane.paper);
+        pane.viewer.SizeChanged([weak, side](auto const&, auto const&) {
+            if (const auto self = weak.lock()) {
+                self->fitOfficePages();
+                self->positionOfficePage(side);
+            }
+        });
+        pane.viewer.ViewChanged([weak, side](auto const&, auto const& args) {
+            if (const auto self = weak.lock(); self && !args.IsIntermediate()) self->officeViewChanged(side);
         });
         place(page, pane.viewer, 0);
         pane.hint = label(side == 0 ? L"等待生成原文预览" : L"翻译后显示译文", 12);
@@ -739,7 +792,7 @@ void DocumentWorkspace::buildPagePreview()
         frame.Child(content);
         place(columns, frame, 0, static_cast<int>(side));
     }
-    place(m_officeLayout, columns, 1);
+    place(m_officeLayout, columns, 0);
 }
 
 void DocumentWorkspace::updatePreferences(Preferences& preferences, DocumentSettings const& settings)
@@ -787,6 +840,7 @@ fire_and_forget DocumentWorkspace::preferencesChanged(bool office)
 
         const bool clearOffice = office && state.document && (state.settings || !state.progress.empty() || state.draftDirty);
         if (clearOffice) {
+            m_officePreferencesFlyout.Hide();
             updatePreferences(selected, previous);
             const BusyFlag modal(m_modal);
             const auto message = L"当前任务 · " + settingsDescription(previous) + L"\n切换为 · " + settingsDescription(settings)
@@ -922,37 +976,43 @@ void DocumentWorkspace::updateOffice(bool preferences)
 {
     const auto state = m_office->snapshot();
     const bool locked = state.translating || state.processing || m_fileOperation || m_modal;
+    const bool hasDocument = state.document != nullptr;
     const auto total = state.document ? state.document->segments().size() : 0;
+    const bool complete = total > 0 && state.completed == total && !state.translating;
+    const bool pptx = state.document && state.document->kind() == L"pptx";
     if (preferences) updatePreferences(m_officeSettings, state.settings.value_or(m_host.currentSettings ? m_host.currentSettings() : DocumentSettings()));
-    m_docName.Text(state.document ? hstring(state.document->path().filename().native()) : hstring{});
+    const auto name = state.document ? hstring(state.document->path().filename().native()) : hstring{};
+    if (m_docName.Text() != name) {
+        m_docName.Text(name);
+        ToolTipService::SetToolTip(m_docName, name.empty() ? nullptr : box_value(name));
+    }
     const auto segmentCount = std::to_wstring(total) + L" 段";
-    m_docCount.Text(state.document && state.document->kind() == L"pptx"
+    m_docCount.Text(pptx
         ? hstring(std::to_wstring(state.document->pageCount()) + L" 页 · " + segmentCount)
         : hstring(L"文档段落 · " + segmentCount));
-    progress(m_docProgress, state.completed, total);
-    std::wstring status;
-    if (state.translating && state.activeSegment) status = L"正在翻译 " + count(*state.activeSegment + 1, total);
-    else if (state.document) status = L"已处理 " + count(state.completed, total);
-    else status = L"先打开文档，再开始翻译";
-    m_docStatus.Text(hstring(status));
-    m_docTask.Text(state.settings ? hstring(std::wstring(state.settings->provider.name) + L" · " +
-        std::wstring(state.settings->sourceLanguage) + L" → " + std::wstring(state.settings->targetLanguage) + L" · " +
-        std::wstring(state.settings->tone)) : hstring());
-    m_docTask.Visibility(state.settings ? Visibility::Visible : Visibility::Collapsed);
-    buttonText(m_officeOpen, state.document ? L"更换文档" : L"打开文档", L"\uE8A5");
+    m_officeEmpty.Visibility(hasDocument ? Visibility::Collapsed : Visibility::Visible);
+    m_officeControls.Visibility(hasDocument ? Visibility::Visible : Visibility::Collapsed);
+    m_officeImport.IsEnabled(!locked && !m_modelTask);
     m_officeOpen.IsEnabled(!locked && !m_modelTask);
     m_officeSave.IsEnabled(!locked && state.document != nullptr);
+    m_officeSave.Visibility(state.document ? Visibility::Visible : Visibility::Collapsed);
+    m_officeSave.Style(style(complete ? L"YiyiPrimaryButton" : L"YiyiButton"));
     m_officeIssues.IsEnabled(!locked && state.document != nullptr);
     const bool hasImages = state.document && !state.document->images().empty();
     m_officeImages.IsEnabled(!locked && hasImages);
     m_officeImages.Visibility(hasImages ? Visibility::Visible : Visibility::Collapsed);
+    m_officePreferences.IsEnabled(!locked);
     m_officeOptions.IsEnabled(!locked);
     m_officeReset.IsEnabled(!locked && state.document != nullptr);
-    m_fitOptions.IsEnabled(state.document && state.document->kind() == L"pptx");
+    m_fitOptions.Visibility(pptx ? Visibility::Visible : Visibility::Collapsed);
+    m_pptPreview.Visibility(pptx ? Visibility::Visible : Visibility::Collapsed);
+    m_officeRetranslate.Visibility(complete ? Visibility::Visible : Visibility::Collapsed);
+    m_officeRetranslate.IsEnabled(complete && !locked && !m_modelTask);
     updateOfficePreviewControls(state);
-    buttonText(m_officeTranslate, state.translating ? L"暂停" : total && state.completed == total ? L"重新翻译"
-        : state.completed ? L"继续翻译" : L"开始翻译", state.translating ? L"\uE769" : L"\uE72A");
+    buttonText(m_officeTranslate, state.translating ? L"暂停" : state.completed ? L"继续翻译" : L"开始翻译",
+        state.translating ? L"\uE769" : L"\uE72A");
     m_officeTranslate.IsEnabled(state.translating || (total && !locked && !m_modelTask));
+    m_officeTranslate.Visibility(complete ? Visibility::Collapsed : Visibility::Visible);
     for (auto const& picker : {m_officeSettings.provider, m_officeSettings.source, m_officeSettings.target, m_officeSettings.tone})
         picker.IsEnabled(!locked);
     m_officeSettings.provider.IsEnabled(!locked && !m_officeSettings.providers.empty());
@@ -1082,6 +1142,7 @@ IAsyncAction DocumentWorkspace::open(std::filesystem::path path)
         if (office) {
             if (error.empty()) {
                 m_segment = -1;
+                m_linkOfficePages = true;
                 clearOfficePreview();
                 const auto document = m_office->snapshot().document;
                 showOfficePreview(document && document->kind() == L"docx" && (!m_renderer.empty() || !m_word.empty()));
@@ -1542,49 +1603,72 @@ fire_and_forget DocumentWorkspace::selectRenderer()
 void DocumentWorkspace::showOfficePreview(bool wholePage)
 {
     if (m_closed) return;
-    if (!wholePage && m_wholePage) cancelOfficePreview();
-    if (wholePage != m_wholePage) {
-        const auto previous = m_wholePage ? m_layoutActions.Children() : m_officeFooter.Children();
-        uint32_t index{};
-        if (previous.IndexOf(m_officeActions, index)) previous.RemoveAt(index);
-        if (wholePage) m_layoutActions.Children().Append(m_officeActions);
-        else place(m_officeFooter, m_officeActions, 0, 1);
-    }
+    const bool switching = wholePage != m_wholePage;
+    if (!wholePage && switching) cancelOfficePreview();
     m_wholePage = wholePage;
-    m_officeLayout.Visibility(wholePage ? Visibility::Visible : Visibility::Collapsed);
-    m_officeParagraphs.Visibility(wholePage ? Visibility::Collapsed : Visibility::Visible);
     m_wholePageView.Style(style(wholePage ? L"YiyiSelectedThemeButton" : L"YiyiGhostButton"));
     m_paragraphView.Style(style(wholePage ? L"YiyiGhostButton" : L"YiyiSelectedThemeButton"));
-    if (wholePage && (!m_preview || !m_preview->matches(m_office->snapshot()))) generateLayoutPreview();
+    const auto state = m_office->snapshot();
+    updateOfficePreviewControls(state);
+    if (!wholePage) return;
+    fitOfficePages();
+    if (switching) {
+        for (size_t side = 0; side < m_previewPanes.size(); ++side) positionOfficePage(side);
+    }
+    if (!m_preview || !m_preview->matches(state)) {
+        if (switching && m_previewCancel && WaitForSingleObject(m_previewCancel->get(), 0) == WAIT_OBJECT_0)
+            m_restartOfficePreview = true;
+        else generateLayoutPreview();
+    }
 }
 
 void DocumentWorkspace::updateOfficePreviewControls(OfficeTaskSnapshot const& state)
 {
     const bool docx = state.document && state.document->kind() == L"docx";
     const bool current = m_preview && m_preview->matches(state);
+    const bool paired = m_previewPanes[0].document && m_previewPanes[1].document;
+    const bool canLink = paired && !m_previewPanes.front().links.empty();
+    m_officeLayout.Visibility(docx && m_wholePage ? Visibility::Visible : Visibility::Collapsed);
+    m_officeParagraphs.Visibility(state.document && !m_wholePage ? Visibility::Visible : Visibility::Collapsed);
     m_officeViews.Visibility(docx ? Visibility::Visible : Visibility::Collapsed);
+    m_previewTools.Visibility(m_wholePage ? Visibility::Visible : Visibility::Collapsed);
     m_previewOpen.IsEnabled(current && !busy());
     m_refreshPreview.IsEnabled(m_previewCancel || (docx && !busy() && !state.translating));
-    buttonText(m_refreshPreview, m_previewCancel ? L"取消预览" : L"刷新预览");
+    buttonIcon(m_refreshPreview, m_previewCancel ? L"取消预览" : L"刷新预览", m_previewCancel ? L"\uE71A" : L"\uE72C");
     m_previewZoom.IsEnabled(m_previewPanes.front().document != nullptr);
-    if (m_previewCancel) m_previewStatus.Text(L"正在生成整页预览…");
-    else if (m_preview && !current) m_previewStatus.Text(L"译文预览待刷新");
-    else m_previewStatus.Text(L"");
+    m_previewLink.Visibility(paired ? Visibility::Visible : Visibility::Collapsed);
+    m_previewLink.IsEnabled(canLink);
+    {
+        const BusyFlag updating(m_updatingOfficeLinks);
+        m_previewLink.SelectedIndex(canLink && m_linkOfficePages ? 0 : 1);
+    }
+    const auto total = state.document ? state.document->segments().size() : 0;
+    std::wstring status;
+    if (m_wholePage && m_previewCancel) status = L"正在生成预览…";
+    else if (state.translating && state.activeSegment) status = L"正在翻译 " + count(*state.activeSegment + 1, total);
+    else if (m_wholePage && m_preview && !current) status = L"预览待刷新";
+    else if (total && state.completed == total) status = L"已完成 · " + std::to_wstring(total) + L" 段";
+    else if (state.completed) status = L"已处理 " + count(state.completed, total);
+    m_docStatus.Text(hstring(status));
 }
 
 void DocumentWorkspace::fitOfficePages()
 {
-    constexpr std::array<double, 5> zoom = {1.0, 1.0, 1.25, 1.5, 2.0};
-    const auto index = static_cast<size_t>(std::clamp(m_previewZoom.SelectedIndex(), 0, static_cast<int>(zoom.size() - 1)));
-    for (auto const& pane : m_previewPanes) {
-        if (!pane.viewer || pane.viewer.ActualWidth() <= 16) continue;
-        auto width = (pane.viewer.ActualWidth() - 16) * zoom[index];
-        if (index == 1 && pane.viewer.ActualHeight() > 12) {
-            const auto bitmap = pane.image.Source().try_as<Media::Imaging::BitmapImage>();
-            if (bitmap && bitmap.PixelHeight() > 0)
-                width = std::min(width, (pane.viewer.ActualHeight() - 12) * bitmap.PixelWidth() / bitmap.PixelHeight());
-        }
+    const auto index = static_cast<size_t>(std::clamp(m_previewZoom.SelectedIndex(), 0, static_cast<int>(officeZoom.size() - 1)));
+    for (size_t side = 0; side < m_previewPanes.size(); ++side) {
+        auto& pane = m_previewPanes[side];
+        if (!pane.viewer || pane.viewer.ActualWidth() <= 2 * previewPaperInset) continue;
+        const auto bitmap = pane.image.Source().try_as<Media::Imaging::BitmapImage>();
+        if (!bitmap || bitmap.PixelWidth() <= 0 || bitmap.PixelHeight() <= 0) continue;
+        const auto ratio = static_cast<double>(bitmap.PixelHeight()) / bitmap.PixelWidth();
+        auto width = (pane.viewer.ActualWidth() - 2 * previewPaperInset) * officeZoom[index];
+        if (index == 1 && pane.viewer.ActualHeight() > 2 * previewPaperInset)
+            width = std::min(width, (pane.viewer.ActualHeight() - 2 * previewPaperInset) / ratio);
+        const auto height = width * ratio;
+        if (pane.image.Width() == width && pane.image.Height() == height) continue;
         pane.image.Width(width);
+        pane.image.Height(height);
+        positionOfficePage(side);
     }
 }
 
@@ -1594,12 +1678,125 @@ void DocumentWorkspace::changeOfficePage(size_t side, int delta)
     if (m_closed || !pane.document) return;
     const auto page = pane.page + delta;
     if (page < 0 || page >= static_cast<int>(pane.document.GetNamedNumber(L"pageCount", 0))) return;
+    m_activeOfficePane = side;
     pane.page = page;
+    pane.readingTop = 0;
     renderOfficePage(side);
+    followOfficePage(side);
+}
+
+void DocumentWorkspace::positionOfficePage(size_t side)
+{
+    auto& pane = m_previewPanes[side];
+    if (pane.positionQueued || !m_wholePage || !pane.image.Source()) return;
+    pane.positionQueued = m_queue.TryEnqueue([weak = weak_from_this(), side] {
+        const auto self = weak.lock();
+        if (!self) return;
+        auto& pane = self->m_previewPanes[side];
+        if (!self->m_closed && self->m_wholePage && pane.image.Source()) {
+            pane.viewer.UpdateLayout();
+            const auto offset = std::clamp(pane.readingTop * pane.image.ActualHeight() + previewPaperInset - previewReadingLine(pane.viewer),
+                                           0.0, pane.viewer.ScrollableHeight());
+            pane.lastOffset = offset;
+            const bool changed = pane.resetHorizontal
+                ? pane.viewer.ChangeView(0.0, offset, nullptr, true)
+                : pane.viewer.ChangeView(nullptr, offset, nullptr, true);
+            if (!changed) pane.lastOffset = pane.viewer.VerticalOffset();
+            pane.resetHorizontal = false;
+        }
+        pane.positionQueued = false;
+    });
+}
+
+void DocumentWorkspace::officeViewChanged(size_t side)
+{
+    auto& pane = m_previewPanes[side];
+    if (m_closed || !m_wholePage || pane.positionQueued || !pane.image.Source()) return;
+    const auto offset = pane.viewer.VerticalOffset();
+    const auto height = pane.image.ActualHeight();
+    if (height <= 0 || std::abs(offset - pane.lastOffset) <= 0.75) return;
+    pane.lastOffset = offset;
+    pane.readingTop = std::clamp((offset + previewReadingLine(pane.viewer) - previewPaperInset) / height, 0.0, 1.0);
+    m_activeOfficePane = side;
+    followOfficePage(side);
+}
+
+DocumentWorkspace::PreviewLink const* DocumentWorkspace::officeLinkAt(size_t side) const
+{
+    const auto& pane = m_previewPanes[side];
+    const auto page = std::ranges::equal_range(pane.links, pane.page, {}, [](auto const& link) { return link.source.page; });
+    if (page.empty()) return nullptr;
+    const auto top = [](auto const& link) { return link.source.top; };
+    const auto next = std::ranges::upper_bound(page, pane.readingTop, {}, top);
+    if (next == page.begin()) return &page.front();
+    // When cells start on the same line, prefer the first paragraph in document order.
+    return &*std::ranges::lower_bound(page, top(*std::prev(next)), {}, top);
+}
+
+void DocumentWorkspace::followOfficePage(size_t side)
+{
+    if (!m_linkOfficePages || !m_wholePage) return;
+    const auto link = officeLinkAt(side);
+    if (!link) return;
+    auto& other = m_previewPanes[1 - side];
+    if (other.page == link->target.page && other.readingTop == link->target.top) return;
+    other.readingTop = link->target.top;
+    if (other.page == link->target.page) positionOfficePage(1 - side);
+    else {
+        other.page = link->target.page;
+        renderOfficePage(1 - side);
+    }
+}
+
+void DocumentWorkspace::setOfficePreviewDocuments(std::array<JsonObject, 2> const& documents)
+{
+    const auto previous = m_linkOfficePages ? officeLinkAt(m_activeOfficePane) : nullptr;
+    const int previousId = previous ? previous->id : 0;
+    std::map<int, std::array<PreviewPosition, 2>> bookmarks;
+    for (size_t side = 0; side < documents.size(); ++side) {
+        auto& pane = m_previewPanes[side];
+        pane.document = documents[side];
+        pane.links.clear();
+        const int pages = pane.document ? static_cast<int>(pane.document.GetNamedNumber(L"pageCount", 0)) : 0;
+        pane.page = std::min(pane.page, std::max(0, pages - 1));
+        if (!pane.document) continue;
+        const auto entries = pane.document.GetNamedArray(L"officeBookmarks", nullptr);
+        if (!entries) continue;
+        for (const auto& entry : entries) {
+            const auto bookmark = entry.GetObject();
+            const int id = static_cast<int>(bookmark.GetNamedNumber(L"id"));
+            bookmarks[id][side] = {static_cast<int>(bookmark.GetNamedNumber(L"page")), bookmark.GetNamedNumber(L"top")};
+        }
+        pane.document.Remove(L"officeBookmarks");
+    }
+    for (const auto& [id, positions] : bookmarks) {
+        if (positions[0].page < 0 || positions[1].page < 0) continue;
+        for (size_t side = 0; side < documents.size(); ++side)
+            m_previewPanes[side].links.push_back({id, positions[side], positions[1 - side]});
+    }
+    for (auto& pane : m_previewPanes) {
+        std::ranges::stable_sort(pane.links, {}, [](auto const& link) { return std::pair{link.source.page, link.source.top}; });
+    }
+    if (m_linkOfficePages) {
+        auto& active = m_previewPanes[m_activeOfficePane];
+        auto& other = m_previewPanes[1 - m_activeOfficePane];
+        const auto restored = std::ranges::find(active.links, previousId, &PreviewLink::id);
+        if (restored != active.links.end()) {
+            active.page = restored->source.page;
+            active.readingTop = restored->source.top;
+            other.page = restored->target.page;
+            other.readingTop = restored->target.top;
+        } else if (const auto link = officeLinkAt(m_activeOfficePane)) {
+            other.page = link->target.page;
+            other.readingTop = link->target.top;
+        }
+    }
+    for (size_t side = 0; side < documents.size(); ++side) renderOfficePage(side);
 }
 
 void DocumentWorkspace::cancelOfficePreview()
 {
+    m_restartOfficePreview = false;
     if (m_previewCancel) SetEvent(m_previewCancel->get());
     if (m_previewInspection) m_previewInspection.Cancel();
 }
@@ -1607,17 +1804,21 @@ void DocumentWorkspace::cancelOfficePreview()
 void DocumentWorkspace::clearOfficePreview()
 {
     m_preview.reset();
+    m_activeOfficePane = 0;
     for (size_t side = 0; side < m_previewPanes.size(); ++side) {
         auto& pane = m_previewPanes[side];
         ++pane.generation;
         if (pane.operation) pane.operation.Cancel();
         pane.operation = nullptr;
         pane.document = nullptr;
+        pane.links.clear();
         pane.page = 0;
+        pane.readingTop = 0;
         pane.counter.Text(L"");
         pane.previous.IsEnabled(false);
         pane.next.IsEnabled(false);
         pane.image.Source(nullptr);
+        pane.paper.Visibility(Visibility::Collapsed);
         pane.hint.Text(side == 0 ? L"等待生成原文预览" : L"翻译后显示译文");
         pane.hint.Visibility(Visibility::Visible);
     }
@@ -1636,12 +1837,18 @@ fire_and_forget DocumentWorkspace::renderOfficePage(size_t side)
     pane.previous.IsEnabled(pages > 0 && pane.page > 0);
     pane.next.IsEnabled(pane.page + 1 < pages);
     pane.image.Source(nullptr);
+    pane.paper.Visibility(Visibility::Collapsed);
+    pane.resetHorizontal = true;
     pane.hint.Text(pages ? L"正在绘制页面…" : side == 0 ? L"等待生成原文预览" : L"翻译后显示译文");
     pane.hint.Visibility(Visibility::Visible);
     if (!pages || !preview) co_return;
     try {
         const auto& path = side == 0 ? preview->original() : preview->translation();
-        const auto operation = renderPdfOriginalAsync(path, pane.document, pane.page, 1500);
+        const auto root = pane.viewer.XamlRoot();
+        const auto scale = root ? root.RasterizationScale() : 1.0;
+        const auto width = pane.viewer.ActualWidth() - 2 * previewPaperInset;
+        const int pixels = width > 0 ? static_cast<int>(std::lround(width * officeZoom.back() * scale)) : 1500;
+        const auto operation = renderPdfOriginalAsync(path, pane.document, pane.page, pixels);
         pane.operation = operation.as<IAsyncInfo>();
         const auto stream = co_await operation;
         if (m_closed || generation != pane.generation) co_return;
@@ -1649,8 +1856,9 @@ fire_and_forget DocumentWorkspace::renderOfficePage(size_t side)
         co_await bitmap.SetSourceAsync(stream);
         if (m_closed || generation != pane.generation) co_return;
         pane.image.Source(bitmap);
+        pane.paper.Visibility(Visibility::Visible);
         fitOfficePages();
-        pane.viewer.ChangeView(0.0, 0.0, nullptr, true);
+        positionOfficePage(side);
         pane.hint.Visibility(Visibility::Collapsed);
     } catch (...) {
         if (m_closed || generation != pane.generation) co_return;
@@ -1694,7 +1902,7 @@ fire_and_forget DocumentWorkspace::generateLayoutPreview()
                 for (size_t side = 0; side < paths.size(); ++side) {
                     if (WaitForSingleObject(cancel->get(), 0) == WAIT_OBJECT_0 || m_closed) break;
                     if (paths[side].empty()) continue;
-                    const auto inspect = inspectPdfAsync(paths[side]);
+                    const auto inspect = inspectPdfAsync(paths[side], {}, preview->bookmarkPrefix());
                     m_previewInspection = inspect.as<IAsyncInfo>();
                     documents[side] = co_await inspect;
                     m_previewInspection = nullptr;
@@ -1705,22 +1913,16 @@ fire_and_forget DocumentWorkspace::generateLayoutPreview()
         m_previewInspection = nullptr;
         m_previewCancel.reset();
         m_fileOperation = false;
+        const bool restart = std::exchange(m_restartOfficePreview, false);
         if (m_closed) co_return;
         const bool cancelled = WaitForSingleObject(cancel->get(), 0) == WAIT_OBJECT_0;
         if (!cancelled && error.empty() && preview && preview->matches(m_office->snapshot())) {
             m_preview = std::move(preview);
-            if (docx) {
-                for (size_t side = 0; side < documents.size(); ++side) {
-                    auto& pane = m_previewPanes[side];
-                    pane.document = documents[side];
-                    const int pages = pane.document ? static_cast<int>(pane.document.GetNamedNumber(L"pageCount", 0)) : 0;
-                    pane.page = std::min(pane.page, std::max(0, pages - 1));
-                    renderOfficePage(side);
-                }
-            }
+            if (docx) setOfficePreviewDocuments(documents);
         }
         updateOffice();
-        if (!error.empty()) report(true, error, true);
+        if (restart && cancelled && m_wholePage) generateLayoutPreview();
+        else if (!error.empty()) report(true, error, true);
         else if (cancelled) report(true, L"已取消整页预览。");
         else if (!docx) report(true, L"已生成 PDF 版式预览。");
     } catch (...) {

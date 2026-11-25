@@ -555,6 +555,50 @@ void scaleParagraph(XmlDocument const& doc, XmlElement const& paragraph, double 
     });
 }
 
+void addPreviewBookmarks(XmlDocument const& doc, std::wstring_view bookmarkPrefix)
+{
+    const auto root = doc.DocumentElement();
+    const auto word = ns(root);
+    const auto uri = root.NamespaceUri();
+    auto prefix = unbox_value_or<hstring>(root.Prefix(), {});
+    prefix = prefix.empty() ? hstring(L"w:") : prefix + L":";
+    std::set<double> usedIds;
+    for (const auto* tag : {L"bookmarkStart", L"bookmarkEnd"}) {
+        for (const auto& bookmark : named(root, tag)) usedIds.insert(number(attribute(bookmark, L"id"), -1));
+    }
+    size_t id = 0;
+    size_t ordinal = 0;
+    const auto walk = [&](auto&& visit, XmlElement const& element) -> void {
+        const auto name = local(element);
+        if (ns(element) != word || name == L"del" || name == L"moveFrom") return;
+        if (name != L"p") {
+            eachElement(element, [&](XmlElement const& child) { visit(visit, child); });
+            return;
+        }
+        const auto text = paragraphText(element);
+        const auto first = std::ranges::find_if(text.nodes, [](XmlElement const& node) {
+            return !trim(string(node.InnerText())).empty();
+        });
+        if (first == text.nodes.end()) return;
+        // Anchor the first line of visible text, including paragraphs in table rows.
+        auto position = *first;
+        for (auto parent = ancestor(position); parent && parent != element; parent = ancestor(position))
+            position = parent;
+        do { ++id; } while (usedIds.contains(static_cast<double>(id)));
+        const auto bookmarkId = to_hstring(id);
+        const auto start = doc.CreateElementNS(uri, prefix + L"bookmarkStart");
+        start.SetAttributeNS(uri, prefix + L"id", bookmarkId);
+        start.SetAttributeNS(uri, prefix + L"name", hstring(std::wstring(bookmarkPrefix) + std::to_wstring(++ordinal)));
+        const auto end = doc.CreateElementNS(uri, prefix + L"bookmarkEnd");
+        end.SetAttributeNS(uri, prefix + L"id", bookmarkId);
+        element.InsertBefore(start, position);
+        element.InsertBefore(end, position);
+    };
+    eachElement(root, [&](XmlElement const& child) {
+        if (local(child) == L"body") walk(walk, child);
+    });
+}
+
 std::string utf8Xml(XmlDocument const& document)
 {
     const auto xml = document.GetXml();
@@ -620,6 +664,7 @@ OfficeDocumentNative OfficeDocumentNative::load(std::filesystem::path const& pat
     if (local(mainDoc.DocumentElement()) != (word ? L"document" : L"presentation"))
         invalid(L"文件内容与扩展名不一致。");
     result.m_kind = word ? L"docx" : L"pptx";
+    result.m_mainPart = hstring(main);
 
     struct Part {
         std::wstring name;
@@ -716,6 +761,18 @@ std::vector<OfficeNotice> OfficeDocumentNative::issues(OfficeTranslations const&
 
 void OfficeDocumentNative::exportTo(std::filesystem::path const& path, OfficeTranslations const& translations, OfficeExportOptions options) const
 {
+    writeDocument(path, translations, options, {});
+}
+
+void OfficeDocumentNative::writePreviewCopy(std::filesystem::path const& path, OfficeTranslations const& translations,
+                                            OfficeExportOptions options, std::wstring_view bookmarkPrefix) const
+{
+    writeDocument(path, translations, options, bookmarkPrefix);
+}
+
+void OfficeDocumentNative::writeDocument(std::filesystem::path const& path, OfficeTranslations const& translations,
+                                         OfficeExportOptions options, std::wstring_view bookmarkPrefix) const
+{
     const auto extension = m_kind == L"docx" ? L".docx" : L".pptx";
     if (!documentFiles::hasExtension(path, extension))
         invalid(hstring(std::wstring(L"请另存为不同文件名的 ") + extension + L" 文件。"));
@@ -733,8 +790,9 @@ void OfficeDocumentNative::exportTo(std::filesystem::path const& path, OfficeTra
         if (translations.contains(segment.id))
             byPart[segment.part].push_back(&segment);
     }
-    const auto updatedPart = [&](XmlDocument const& doc, std::vector<OfficeSegment const*> const& segments) {
+    const auto updatedPart = [&](XmlDocument const& doc, std::vector<OfficeSegment const*> const& segments, bool preview) {
         const auto items = paragraphs(doc);
+        if (preview) addPreviewBookmarks(doc, bookmarkPrefix);
         std::set<size_t> scaled;
         for (const auto* segment : segments) {
             if (segment->paragraph >= items.size()) fail(L"文档段落映射发生变化。");
@@ -768,11 +826,13 @@ void OfficeDocumentNative::exportTo(std::filesystem::path const& path, OfficeTra
         const auto partInfo = reader.stat(i);
         const auto part = to_hstring(partInfo.m_filename);
         const auto edit = byPart.find(part);
+        const bool preview = !bookmarkPrefix.empty() && part == m_mainPart;
         bool written;
-        if (edit == byPart.end()) {
+        if (edit == byPart.end() && !preview) {
             written = mz_zip_writer_add_from_zip_reader(&writer.zip, &reader.zip, i);
         } else {
-            const auto bytes = updatedPart(parseXml(reader.read(i), part), edit->second);
+            const std::vector<OfficeSegment const*> empty;
+            const auto bytes = updatedPart(parseXml(reader.read(i), part), edit == byPart.end() ? empty : edit->second, preview);
             written = mz_zip_writer_add_mem(&writer.zip, partInfo.m_filename, bytes.data(), bytes.size(), MZ_BEST_SPEED);
         }
         if (!written) fail(L"导出失败，请检查磁盘空间和目录权限。");

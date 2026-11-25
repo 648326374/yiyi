@@ -12,8 +12,17 @@ from xml.etree import ElementTree
 from zipfile import ZipFile
 
 
+WORD = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+
+
+def bookmarks(path):
+    with ZipFile(path) as archive:
+        root = ElementTree.fromstring(archive.read("word/document.xml"))
+    return [bookmark.attrib[WORD + "name"] for bookmark in root.iter(WORD + "bookmarkStart")]
+
+
 def write_paths_fixture(source, destination):
-    w = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+    w = WORD
     with ZipFile(source) as template, ZipFile(destination, "w") as output:
         body = ElementTree.fromstring(template.read("word/document.xml"))
         content = body.find(w + "body")
@@ -98,6 +107,7 @@ def run(executable, fixtures, renderer_source):
             env = dict(os.environ, TEMP=str(preview_base), TMP=str(preview_base))
             subprocess.run([executable, str(directory), base, str(renderer)], check=True, timeout=25, env=env)
             assert not list(preview_base.iterdir())
+            assert bookmarks(directory / "sample-译文.docx") == bookmarks(fixtures / "sample.docx")
             for task in tasks.glob("*.json"):
                 assert "synthetic-key" not in task.read_text(encoding="utf-8")
         assert len(received) >= 5

@@ -38,6 +38,7 @@ public:
     std::filesystem::path const& path() const { return m_translation.empty() ? m_original : m_translation; }
     std::filesystem::path const& original() const { return m_original; }
     std::filesystem::path const& translation() const { return m_translation; }
+    winrt::hstring const& bookmarkPrefix() const { return m_bookmarkPrefix; }
     bool matches(OfficeTaskSnapshot const& state) const { return m_generation == state.generation && m_revision == state.revision; }
 
 private:
@@ -46,6 +47,7 @@ private:
     std::filesystem::path m_directory;
     std::filesystem::path m_original;
     std::filesystem::path m_translation;
+    winrt::hstring m_bookmarkPrefix;
     uint64_t m_generation{};
     uint64_t m_revision{};
 };

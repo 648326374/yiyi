@@ -256,9 +256,11 @@ IAsyncOperation<InMemoryRandomAccessStream> previewAsync(JsonObject request, hst
 
 }
 
-IAsyncOperation<JsonObject> inspectPdfAsync(std::filesystem::path source, PdfRequestProgress progress)
+IAsyncOperation<JsonObject> inspectPdfAsync(std::filesystem::path source, PdfRequestProgress progress, hstring officeBookmarkPrefix)
 {
-    return queryAsync(requestFor(source, L"info"), std::move(progress));
+    auto request = requestFor(source, L"info");
+    if (!officeBookmarkPrefix.empty()) request.Insert(L"officeBookmarkPrefix", JsonValue::CreateStringValue(officeBookmarkPrefix));
+    return queryAsync(std::move(request), std::move(progress));
 }
 
 IAsyncOperation<JsonObject> analyzePdfPagesAsync(std::filesystem::path source, JsonObject document,

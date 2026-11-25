@@ -245,7 +245,7 @@ bool namedExecutable(std::filesystem::path const& executable, wchar_t const* nam
 }
 
 void runRenderer(std::filesystem::path const& renderer, std::filesystem::path const& directory,
-                 std::vector<std::filesystem::path> const& inputs, HANDLE cancel)
+                 std::vector<std::filesystem::path> const& inputs, bool exportBookmarks, HANDLE cancel)
 {
     if (namedExecutable(renderer, L"WINWORD.EXE")) {
         const auto worker = executableDirectory() / L"yiyi_word_preview.exe";
@@ -255,8 +255,11 @@ void runRenderer(std::filesystem::path const& renderer, std::filesystem::path co
     }
     if (!std::filesystem::is_regular_file(renderer) || !namedExecutable(renderer, L"soffice.exe"))
         fail(L"请选择已安装 LibreOffice 的 soffice.exe。");
+    const auto filter = exportBookmarks
+        ? LR"("pdf:writer_pdf_Export:{\"ExportBookmarksToPDFDestination\":{\"type\":\"boolean\",\"value\":\"true\"}}")"
+        : L"pdf";
     auto command = L"\"" + renderer.native() + L"\" \"-env:UserInstallation=" + fileUrl(directory / L"profile")
-        + L"\" --headless --convert-to pdf --outdir \"" + directory.native() + L"\"";
+        + L"\" --headless --convert-to " + filter + L" --outdir \"" + directory.native() + L"\"";
     for (const auto& input : inputs)
         command += L" \"" + input.native() + L"\"";
     runPreviewProcess(renderer, std::move(command), cancel, L"LibreOffice 未能生成整页预览，请确认它可以打开这份文档。");
@@ -648,25 +651,31 @@ std::shared_ptr<OfficeLayoutPreview const> OfficeTask::renderPreview(std::filesy
         revision = m_data.revision;
     }
     checkCancellation(cancel);
+    auto id = std::wstring(to_hstring(GuidHelper::CreateNewGuid()));
     auto directory = std::filesystem::canonical(std::filesystem::temp_directory_path()) /
-        (L"yiyi-office-preview-" + std::wstring(to_hstring(GuidHelper::CreateNewGuid())));
+        (L"yiyi-office-preview-" + id);
     if (!std::filesystem::create_directory(directory)) fail(L"无法创建版式预览目录。");
     auto preview = std::shared_ptr<OfficeLayoutPreview>(new OfficeLayoutPreview(directory));
     preview->m_generation = generation;
     preview->m_revision = revision;
+    const bool docx = document->kind() == L"docx";
+    if (docx && !text.empty()) {
+        std::erase_if(id, [](wchar_t c) { return c == L'{' || c == L'}' || c == L'-'; });
+        preview->m_bookmarkPrefix = hstring(L"Yiyi" + id.substr(0, 24) + L"_");
+    }
     std::vector<std::filesystem::path> inputs;
-    if (document->kind() == L"docx") {
+    if (docx) {
         inputs.push_back(directory / L"original.docx");
-        document->exportTo(inputs.back(), {});
+        document->writePreviewCopy(inputs.back(), {}, {}, preview->m_bookmarkPrefix);
         preview->m_original = directory / L"original.pdf";
     }
     if (!text.empty() || document->kind() == L"pptx") {
         checkCancellation(cancel);
         inputs.push_back(directory / (L"preview." + std::wstring(document->kind())));
-        document->exportTo(inputs.back(), text, options);
+        document->writePreviewCopy(inputs.back(), text, options, preview->m_bookmarkPrefix);
         preview->m_translation = directory / L"preview.pdf";
     }
-    runRenderer(renderer, directory, inputs, cancel);
+    runRenderer(renderer, directory, inputs, !preview->m_bookmarkPrefix.empty(), cancel);
     for (auto input : inputs) {
         input.replace_extension(L".pdf");
         if (!std::filesystem::is_regular_file(input) || std::filesystem::file_size(input) == 0)

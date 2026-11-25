@@ -40,8 +40,20 @@ private:
         std::vector<Provider> providers;
     };
 
+    struct PreviewPosition {
+        int page{-1};
+        double top{};
+    };
+
+    struct PreviewLink {
+        int id{};
+        PreviewPosition source;
+        PreviewPosition target;
+    };
+
     struct PreviewPane {
         winrt::Microsoft::UI::Xaml::Controls::ScrollViewer viewer{nullptr};
+        winrt::Microsoft::UI::Xaml::Controls::Border paper{nullptr};
         winrt::Microsoft::UI::Xaml::Controls::Image image{nullptr};
         winrt::Microsoft::UI::Xaml::Controls::TextBlock counter{nullptr};
         winrt::Microsoft::UI::Xaml::Controls::TextBlock hint{nullptr};
@@ -49,8 +61,13 @@ private:
         winrt::Microsoft::UI::Xaml::Controls::Button next{nullptr};
         winrt::Windows::Data::Json::JsonObject document{nullptr};
         winrt::Windows::Foundation::IAsyncInfo operation{nullptr};
+        std::vector<PreviewLink> links;
         uint64_t generation{};
         int page{};
+        double readingTop{};
+        double lastOffset{};
+        bool positionQueued{};
+        bool resetHorizontal{};
     };
 
     explicit DocumentWorkspace(DocumentWorkspaceHost host);
@@ -89,6 +106,11 @@ private:
     void updateOfficePreviewControls(OfficeTaskSnapshot const& state);
     void fitOfficePages();
     void changeOfficePage(size_t side, int delta);
+    void positionOfficePage(size_t side);
+    void officeViewChanged(size_t side);
+    PreviewLink const* officeLinkAt(size_t side) const;
+    void followOfficePage(size_t side);
+    void setOfficePreviewDocuments(std::array<winrt::Windows::Data::Json::JsonObject, 2> const& documents);
     void cancelOfficePreview();
     void clearOfficePreview();
     void copyText();
@@ -103,6 +125,8 @@ private:
     winrt::Microsoft::UI::Xaml::Controls::ListView m_tabs{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Grid m_textPage{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Grid m_officePage{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::StackPanel m_officeEmpty{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::StackPanel m_officeControls{nullptr};
     winrt::Microsoft::UI::Dispatching::DispatcherQueue m_queue{nullptr};
     winrt::Microsoft::UI::Dispatching::DispatcherQueueTimer m_draftTimer{nullptr};
     Preferences m_textSettings;
@@ -113,7 +137,6 @@ private:
     winrt::Microsoft::UI::Xaml::Controls::TextBox m_docSource{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::TextBox m_docResult{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::ProgressBar m_txtProgress{nullptr};
-    winrt::Microsoft::UI::Xaml::Controls::ProgressBar m_docProgress{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::TextBlock m_txtName{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::TextBlock m_docName{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::TextBlock m_txtCount{nullptr};
@@ -122,7 +145,6 @@ private:
     winrt::Microsoft::UI::Xaml::Controls::TextBlock m_txtStatus{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::TextBlock m_docStatus{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::TextBlock m_txtTask{nullptr};
-    winrt::Microsoft::UI::Xaml::Controls::TextBlock m_docTask{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::InfoBar m_txtInfo{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::InfoBar m_docInfo{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::ListView m_segmentList{nullptr};
@@ -131,17 +153,22 @@ private:
     winrt::Microsoft::UI::Xaml::Controls::Button m_textReset{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_textSave{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_textCopy{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::Button m_officeImport{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_officeOpen{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_officeTranslate{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_officeSave{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_officeIssues{nullptr};
-    winrt::Microsoft::UI::Xaml::Controls::Button m_officeImages{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::Button m_officePreferences{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::Flyout m_officePreferencesFlyout{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_officeOptions{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_officeEdit{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_officeKeep{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_officeRetry{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_previewOpen{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_pptPreview{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_fitOptions{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_officeImages{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_officeRetranslate{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::MenuFlyoutItem m_officeReset{nullptr};
     std::filesystem::path m_renderer;
     std::filesystem::path m_word;
@@ -150,16 +177,15 @@ private:
     winrt::Windows::Foundation::IAsyncInfo m_previewInspection{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Grid m_officeParagraphs{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Grid m_officeLayout{nullptr};
-    winrt::Microsoft::UI::Xaml::Controls::Grid m_officeFooter{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::StackPanel m_officeViews{nullptr};
-    winrt::Microsoft::UI::Xaml::Controls::StackPanel m_officeActions{nullptr};
-    winrt::Microsoft::UI::Xaml::Controls::StackPanel m_layoutActions{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::StackPanel m_previewTools{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_wholePageView{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_paragraphView{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::Button m_refreshPreview{nullptr};
+    winrt::Microsoft::UI::Xaml::Controls::ComboBox m_previewLink{nullptr};
     winrt::Microsoft::UI::Xaml::Controls::ComboBox m_previewZoom{nullptr};
-    winrt::Microsoft::UI::Xaml::Controls::TextBlock m_previewStatus{nullptr};
     std::array<PreviewPane, 2> m_previewPanes;
+    size_t m_activeOfficePane{};
     int m_segment{-1};
     bool m_updating{};
     bool m_updatingPreferences{};
@@ -168,6 +194,9 @@ private:
     bool m_modelTask{};
     bool m_closed{};
     bool m_wholePage{};
+    bool m_linkOfficePages{true};
+    bool m_updatingOfficeLinks{};
+    bool m_restartOfficePreview{};
 };
 
 }

@@ -106,6 +106,14 @@
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="12" />
             </Style>
+            <Style x:Key="YiyiOfficePreviewViewport" TargetType="ScrollViewer">
+                <Setter Property="Background" Value="{ThemeResource YiyiSubtleBrush}" />
+            </Style>
+            <Style x:Key="YiyiOfficePreviewPaper" TargetType="Border">
+                <Setter Property="BorderBrush" Value="{ThemeResource YiyiBorderBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Margin" Value="8" />
+            </Style>
             <Style x:Key="YiyiButton" TargetType="Button">
                 <Setter Property="FontFamily" Value="Microsoft YaHei UI" />
                 <Setter Property="FontSize" Value="12" />

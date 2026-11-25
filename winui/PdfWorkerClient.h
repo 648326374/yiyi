@@ -14,7 +14,7 @@ using PdfRequestProgress = std::function<void(winrt::Windows::Data::Json::JsonOb
 using PdfPreviewStatuses = std::function<void(winrt::Windows::Data::Json::JsonArray const&)>;
 
 winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Data::Json::JsonObject>
-inspectPdfAsync(std::filesystem::path source, PdfRequestProgress progress = {});
+inspectPdfAsync(std::filesystem::path source, PdfRequestProgress progress = {}, winrt::hstring officeBookmarkPrefix = {});
 
 winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Data::Json::JsonObject>
 analyzePdfPagesAsync(std::filesystem::path source, winrt::Windows::Data::Json::JsonObject document,

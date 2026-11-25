@@ -189,6 +189,27 @@ def check_page_content(root, nav_item, first_control):
     assert not (redundant & labels), redundant & labels
 
 
+def check_document_tabs(root, ui, screenshots, theme):
+    documents = ui("DocumentsItem")
+    documents.iface_selection_item.Select()
+    formats = wait("document tabs", lambda: root.descendants(title="文档格式", control_type="List"))[0]
+    check_page_content(root, documents, formats)
+    assert root.descendants(title="导入 TXT", control_type="Button")[0].is_enabled()
+    tone = root.descendants(title="翻译风格", control_type="ComboBox")[0].rectangle()
+    size_hint = root.descendants(title="TXT · 最多 20 万字符", control_type="Text")[0].rectangle()
+    assert size_hint.width() > 0 and size_hint.left > tone.right, (size_hint, tone)
+    screenshot(root, screenshots, f"txt-document-{theme}")
+
+    formats.descendants(title="Word / PPT", control_type="ListItem")[0].iface_selection_item.Select()
+    open_button = wait("Office import", lambda: root.descendants(title="打开文档", control_type="Button"))[0]
+    assert open_button.is_enabled()
+    visible = {item.window_text() for item in root.descendants() if item.is_visible()}
+    assert "或拖入 DOCX / PPTX" in visible
+    assert not ({"更换文档", "翻译设置", "开始翻译", "文档段落", "译文校对", "保存校对"} & visible)
+    check_page_content(root, documents, formats)
+    screenshot(root, screenshots, f"office-import-{theme}")
+
+
 def verify(executable, screenshots):
     with fake_provider() as (requests, url), paste_fixture() as put:
         settings = {"selectedProviderId": "demo", "providers": [
@@ -219,7 +240,7 @@ def verify(executable, screenshots):
 
             focus_editor(source)
             keys("The store opens at nine.")
-            assert source.iface_value.CurrentValue == "The store opens at nine.", repr(source.iface_value.CurrentValue)
+            wait("typed original", lambda: source.iface_value.CurrentValue == "The store opens at nine.")
             assert not requests
             keys("^({ENTER})")
             submitted(ui, "The store opens at nine.")
@@ -304,13 +325,7 @@ def verify(executable, screenshots):
             check_page_content(root, ui("FavoritesItem"), ui("LibrarySearch"))
             assert ui("LibraryEmptyTitle").window_text() == "暂无收藏"
 
-            ui("DocumentsItem").iface_selection_item.Select()
-            formats = wait("document tabs", lambda: root.descendants(title="文档格式", control_type="List"))[0]
-            check_page_content(root, ui("DocumentsItem"), formats)
-            assert root.descendants(title="导入 TXT", control_type="Button")[0].is_enabled()
-            formats.descendants(title="Word / PPT", control_type="ListItem")[0].iface_selection_item.Select()
-            assert root.descendants(title="打开文档", control_type="Button")[0].is_enabled()
-            check_page_content(root, ui("DocumentsItem"), formats)
+            check_document_tabs(root, ui, screenshots, "light")
 
             ui("PdfItem").iface_selection_item.Select()
             check_page_content(root, ui("PdfItem"), ui("PdfOpenButton"))
@@ -323,6 +338,8 @@ def verify(executable, screenshots):
             dpi = ctypes.windll.user32.GetDpiForWindow(root.handle)
             gui.SetWindowPos(root.handle, 0, 0, 0, round(900 * dpi / 96), round(600 * dpi / 96),
                              wc.SWP_NOMOVE | wc.SWP_NOZORDER)
+            check_document_tabs(root, ui, screenshots, "dark")
+            ui("TranslateItem").iface_selection_item.Select()
             source = ui("SourceText")
             put("garden")
             focus_editor(source)

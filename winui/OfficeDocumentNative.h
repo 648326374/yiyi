@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <map>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace yiyi {
@@ -56,11 +57,16 @@ public:
     std::vector<OfficeNotice> issues(OfficeTranslations const& translations, OfficeExportOptions options = {}) const;
     std::string imageBytes(winrt::hstring const& id) const;
     void exportTo(std::filesystem::path const& path, OfficeTranslations const& translations, OfficeExportOptions options = {}) const;
+    void writePreviewCopy(std::filesystem::path const& path, OfficeTranslations const& translations,
+                          OfficeExportOptions options, std::wstring_view bookmarkPrefix) const;
 
 private:
+    void writeDocument(std::filesystem::path const& path, OfficeTranslations const& translations,
+                       OfficeExportOptions options, std::wstring_view bookmarkPrefix) const;
     std::filesystem::path m_path;
     std::filesystem::path m_sourcePath;
     winrt::hstring m_kind;
+    winrt::hstring m_mainPart;
     winrt::hstring m_hash;
     size_t m_pages{};
     std::vector<OfficeSegment> m_segments;
