@@ -101,7 +101,22 @@ Build-WinUIWorker 'office'
 
 $project = Join-Path $repoRoot 'winui\Yiyi.WinUI.vcxproj'
 $appLocal = $SelfContained.IsPresent.ToString().ToLowerInvariant()
-& $msbuild $project /restore /m /v:minimal "/p:Configuration=$Configuration" /p:Platform=x64 "/p:WindowsAppSDKSelfContained=$appLocal"
+$buildProperties = @('/v:minimal', "/p:Configuration=$Configuration", '/p:Platform=x64', "/p:WindowsAppSDKSelfContained=$appLocal")
+
+$auditSourceWarning = '\bNU1900\s*:'
+$restoreOutput = & $msbuild $project /t:Restore @buildProperties
+$restoreExitCode = $LASTEXITCODE
+if ($restoreExitCode -eq 0 -and ($restoreOutput -match $auditSourceWarning)) {
+    $restoreOutput | Where-Object { $_ -notmatch $auditSourceWarning }
+    Write-Output 'NuGet audit data unavailable (NU1900). Retrying restore with fresh HTTP data.'
+    & $msbuild $project /t:Restore @buildProperties /p:RestoreForce=true /p:RestoreNoHttpCache=true
+    $restoreExitCode = $LASTEXITCODE
+} else {
+    $restoreOutput
+}
+if ($restoreExitCode -ne 0) { throw 'Yiyi WinUI NuGet restore failed.' }
+
+& $msbuild $project /m @buildProperties
 if ($LASTEXITCODE -ne 0) { throw 'Yiyi WinUI build failed.' }
 
 function Test-WinUIStartup([string]$Executable) {
